@@ -1,0 +1,22 @@
+{
+  "groundtruth_version": "0.1",
+  "application": "orders_app_fixed",
+  "description": "Reference variant: one aggregate query. It still reads all users without a limit (MEM-001).",
+  "rules_in_scope": [
+    "DB-001",
+    "DB-003",
+    "CMP-001",
+    "MEM-001",
+    "MEM-002",
+    "EXT-001"
+  ],
+  "expected_findings": [
+    {
+      "rule_id": "MEM-001",
+      "file": "app/main.py",
+      "function": "list_order_summaries",
+      "line": 51,
+      "note": "aggregate over all users, unbounded"
+    }
+  ]
+}

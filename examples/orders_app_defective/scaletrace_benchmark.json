@@ -1,0 +1,91 @@
+{
+  "schema_version": "1.0",
+  "app_id": "orders_app_defective",
+  "kind": "bad",
+  "description": "Demo app with one injected query-inside-loop defect.",
+  "origin": {
+    "source": "example",
+    "author": "ScaleTrace maintainers",
+    "template_family": "orders",
+    "derived_from": null
+  },
+  "split": "unassigned",
+  "exclusion_reason": null,
+  "run": {
+    "workload": "scaletrace_workload.json",
+    "runtime_status": "verified",
+    "notes": "Runtime measured during development."
+  },
+  "defects": [
+    {
+      "defect_id": "orders_app_defective-d1",
+      "rule_id": "MEM-001",
+      "category": "memory_resource_exhaustion",
+      "file": "app/main.py",
+      "function": "list_order_summaries",
+      "line_start": 53,
+      "line_end": 53,
+      "endpoint": null,
+      "symptom_kind": null,
+      "root_cause_functions": [],
+      "path": [],
+      "description": "all users loaded",
+      "verification": {
+        "static": "verified",
+        "runtime": "not_applicable",
+        "verified_by": "ScaleTrace maintainers (example fixture)",
+        "date": "2026-10-25",
+        "notes": "Demo workload sizes do not move process memory measurably; no runtime metric confirms this label."
+      }
+    },
+    {
+      "defect_id": "orders_app_defective-d2",
+      "rule_id": "DB-001",
+      "category": "repeated_database_queries",
+      "file": "app/main.py",
+      "function": "list_order_summaries",
+      "line_start": 56,
+      "line_end": 56,
+      "endpoint": "GET /orders/summary",
+      "symptom_kind": "query_growth",
+      "root_cause_functions": [
+        "app.main:list_order_summaries"
+      ],
+      "path": [
+        "endpoint:GET /orders/summary",
+        "function:app.main:list_order_summaries",
+        "resource:database"
+      ],
+      "description": "db.query(Order) executed once per user in the for loop.",
+      "verification": {
+        "static": "verified",
+        "runtime": "verified",
+        "verified_by": "ScaleTrace maintainers (example fixture)",
+        "date": "2026-10-25",
+        "notes": ""
+      }
+    },
+    {
+      "defect_id": "orders_app_defective-d3",
+      "rule_id": "MEM-001",
+      "category": "memory_resource_exhaustion",
+      "file": "app/main.py",
+      "function": "list_order_summaries",
+      "line_start": 56,
+      "line_end": 56,
+      "endpoint": null,
+      "symptom_kind": null,
+      "root_cause_functions": [],
+      "path": [],
+      "description": "all orders of a user loaded",
+      "verification": {
+        "static": "verified",
+        "runtime": "not_applicable",
+        "verified_by": "ScaleTrace maintainers (example fixture)",
+        "date": "2026-10-25",
+        "notes": "Demo workload sizes do not move process memory measurably; no runtime metric confirms this label."
+      }
+    }
+  ],
+  "known_non_defects": []
+}

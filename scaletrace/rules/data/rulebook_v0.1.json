@@ -1,0 +1,763 @@
+{
+  "rulebook_version": "0.1.0",
+  "status": "preliminary",
+  "project": "ScaleTrace",
+  "purpose": "Machine-readable preliminary rulebook for detecting potential scalability and reliability risks in Python/FastAPI backend applications.",
+  "scope": {
+    "language": "Python 3.x",
+    "primary_framework": "FastAPI",
+    "primary_database_context": [
+      "SQLAlchemy",
+      "SQLModel",
+      "common Python DB drivers"
+    ],
+    "principle": "Static evidence identifies a potential risk pattern; runtime evidence is used to determine whether measurable impact occurs under a specified workload.",
+    "research_status": "All rules require literature verification before being treated as research-validated."
+  },
+  "finding_policy": {
+    "never_claim_confirmed_failure_from_static_analysis": true,
+    "preferred_static_language": "Potential scalability/reliability risk detected.",
+    "preferred_runtime_language": "Observed impact under the tested workload.",
+    "causal_language": "Use 'probable cause' unless causal evidence is sufficient.",
+    "confidence_percentages": false
+  },
+  "severity_levels": {
+    "low": "Potentially minor impact or normally requires unusual conditions.",
+    "medium": "Could materially affect performance/resource use under realistic workloads.",
+    "high": "Could substantially increase resource consumption, latency, dependency load, or resource exhaustion risk under realistic scaling conditions."
+  },
+  "rule_statuses": {
+    "core": "Recommended for the initial 7-week ScaleTrace prototype.",
+    "extension": "Useful extension if implementation time permits.",
+    "experimental": "Keep outside the core evaluation until framework/runtime semantics are validated."
+  },
+  "rules": [
+    {
+      "id": "DB-001",
+      "name": "Database Query Inside Iterative Loop",
+      "status": "core",
+      "classification": "deterministic",
+      "category": "repeated_database_queries",
+      "description": "A database or ORM operation is executed inside a loop whose iteration count may grow with input or database cardinality.",
+      "why": "Database work may grow with the number of loop iterations, increasing query count, database load, and request latency.",
+      "frameworks": [
+        "FastAPI",
+        "SQLAlchemy",
+        "SQLModel",
+        "Python DB drivers"
+      ],
+      "static_evidence": [
+        "database call nested inside for or while loop",
+        "ORM query/execute operation inside loop body",
+        "database dependency reachable from loop body"
+      ],
+      "runtime_evidence": [
+        "queries_per_request",
+        "query_count_vs_input_size",
+        "database_latency",
+        "endpoint_latency",
+        "connection_pool_wait"
+      ],
+      "false_positives": [
+        "small strictly bounded loops",
+        "intentionally independent queries",
+        "data already cached by an abstraction"
+      ],
+      "severity": "high",
+      "diagnostic_steps": [
+        "locate database operation",
+        "identify enclosing loop",
+        "determine possible loop cardinality",
+        "measure query count under increasing input size",
+        "compare endpoint latency and database load"
+      ],
+      "detection": [
+        "AST",
+        "call_graph",
+        "runtime"
+      ],
+      "test_case": "Run the same endpoint with 10, 100, and 1000 records and determine whether query count grows with record count.",
+      "literature_verification_required": true
+    },
+    {
+      "id": "DB-002",
+      "name": "Repeated Equivalent Database Operation",
+      "status": "core",
+      "classification": "heuristic",
+      "category": "repeated_database_queries",
+      "description": "Equivalent database operations are executed repeatedly within the same request or control-flow path without an evident need to repeat them.",
+      "why": "Redundant database work consumes database and application resources and may increase request latency.",
+      "frameworks": [
+        "FastAPI",
+        "SQLAlchemy",
+        "SQLModel",
+        "Python DB drivers"
+      ],
+      "static_evidence": [
+        "duplicate query expressions",
+        "repeated repository calls with equivalent arguments",
+        "same query signature on one control-flow path"
+      ],
+      "runtime_evidence": [
+        "normalized SQL repetition",
+        "query count",
+        "query latency"
+      ],
+      "false_positives": [
+        "database state intentionally changes between calls",
+        "cache invalidation requires a fresh read",
+        "equivalent-looking calls have hidden side effects"
+      ],
+      "severity": "medium",
+      "diagnostic_steps": [
+        "normalize query signatures",
+        "identify repeated operations",
+        "measure actual query count",
+        "inspect whether results can safely be reused"
+      ],
+      "detection": [
+        "AST",
+        "runtime"
+      ],
+      "test_case": "Instrument database access and verify whether one logical request executes the same logical lookup multiple times.",
+      "literature_verification_required": true
+    },
+    {
+      "id": "DB-003",
+      "name": "ORM Relationship N+1",
+      "status": "core",
+      "classification": "heuristic",
+      "category": "repeated_database_queries",
+      "description": "Access to a lazily loaded ORM relationship occurs while iterating over parent entities, potentially causing one child query per parent.",
+      "why": "Query count can become proportional to the number of parent entities.",
+      "frameworks": [
+        "FastAPI",
+        "SQLAlchemy",
+        "SQLModel"
+      ],
+      "static_evidence": [
+        "parent collection iteration",
+        "relationship attribute access inside loop",
+        "lazy relationship configuration when available"
+      ],
+      "runtime_evidence": [
+        "parent query followed by repeated child queries",
+        "query_count_vs_parent_count",
+        "database latency"
+      ],
+      "false_positives": [
+        "relationship already eagerly loaded",
+        "relationship data is cached",
+        "ORM configuration prevents additional queries"
+      ],
+      "severity": "high",
+      "diagnostic_steps": [
+        "inspect ORM relationship loading strategy",
+        "trace generated SQL",
+        "vary parent collection size",
+        "compare query count"
+      ],
+      "detection": [
+        "AST",
+        "framework_analysis",
+        "runtime"
+      ],
+      "test_case": "Create benchmark data with increasing numbers of parents and related records and compare generated query counts.",
+      "literature_verification_required": true
+    },
+    {
+      "id": "CMP-001",
+      "name": "Expensive Operation Inside Large Loop",
+      "status": "core",
+      "classification": "heuristic",
+      "category": "inefficient_computation",
+      "description": "A potentially expensive CPU, allocation, parsing, sorting, serialization, or inference operation is repeatedly executed inside a loop.",
+      "why": "Repeated work can make execution cost grow with input size.",
+      "frameworks": [
+        "FastAPI",
+        "Python"
+      ],
+      "static_evidence": [
+        "known expensive operation nested in loop",
+        "repeated sorting",
+        "repeated parsing",
+        "repeated model inference",
+        "repeated serialization"
+      ],
+      "runtime_evidence": [
+        "CPU time",
+        "function execution time",
+        "call count",
+        "endpoint latency"
+      ],
+      "false_positives": [
+        "operation is inexpensive for the tested inputs",
+        "loop is strictly bounded",
+        "library internally caches the computation"
+      ],
+      "severity": "medium",
+      "diagnostic_steps": [
+        "identify repeated operation",
+        "measure call count",
+        "profile CPU time",
+        "vary input size",
+        "compare growth in execution time"
+      ],
+      "detection": [
+        "AST",
+        "runtime"
+      ],
+      "test_case": "Benchmark increasing input sizes and determine whether CPU time grows disproportionately.",
+      "literature_verification_required": true
+    },
+    {
+      "id": "CMP-002",
+      "name": "Loop-Invariant Repeated Computation",
+      "status": "core",
+      "classification": "deterministic",
+      "category": "inefficient_computation",
+      "description": "An expression or function call whose relevant inputs do not change within a loop is recomputed on every iteration.",
+      "why": "Loop-invariant work may be repeated unnecessarily.",
+      "frameworks": [
+        "FastAPI",
+        "Python"
+      ],
+      "static_evidence": [
+        "call nested inside loop",
+        "arguments do not depend on loop variable",
+        "no visible mutation of relevant inputs"
+      ],
+      "runtime_evidence": [
+        "call count",
+        "CPU time",
+        "I/O time"
+      ],
+      "false_positives": [
+        "function observes changing external state",
+        "function has required side effects",
+        "mutation occurs through an indirect dependency"
+      ],
+      "severity": "medium",
+      "diagnostic_steps": [
+        "perform variable-dependency analysis",
+        "inspect side effects",
+        "measure actual invocation count"
+      ],
+      "detection": [
+        "AST",
+        "data_flow"
+      ],
+      "test_case": "Instrument the candidate function and verify whether invocation count equals loop iterations unnecessarily.",
+      "literature_verification_required": true
+    },
+    {
+      "id": "MEM-001",
+      "name": "Unbounded Full Dataset Materialization",
+      "status": "core",
+      "classification": "deterministic",
+      "category": "memory_resource_exhaustion",
+      "description": "Potentially large or unbounded data is fully materialized in application memory.",
+      "why": "Memory consumption can grow with dataset size and may become a limiting resource.",
+      "frameworks": [
+        "FastAPI",
+        "SQLAlchemy",
+        "SQLModel",
+        "Python DB drivers"
+      ],
+      "static_evidence": [
+        ".all() on potentially large query",
+        "fetchall()",
+        "list(query_or_iterator)",
+        "full file/body reads",
+        "absence of visible pagination or streaming"
+      ],
+      "runtime_evidence": [
+        "process_RSS",
+        "heap_allocation",
+        "dataset_size",
+        "endpoint_latency"
+      ],
+      "false_positives": [
+        "dataset has a documented small upper bound",
+        "pagination is enforced by an outer layer",
+        "full materialization is required and bounded"
+      ],
+      "severity": "high",
+      "diagnostic_steps": [
+        "determine possible dataset cardinality",
+        "measure process memory",
+        "increase dataset size",
+        "compare memory growth",
+        "check for pagination or streaming"
+      ],
+      "detection": [
+        "AST",
+        "runtime"
+      ],
+      "test_case": "Run against progressively larger datasets and record process memory and latency.",
+      "literature_verification_required": true
+    },
+    {
+      "id": "MEM-002",
+      "name": "Unbounded Accumulation",
+      "status": "core",
+      "classification": "heuristic",
+      "category": "memory_resource_exhaustion",
+      "description": "A collection grows repeatedly without a visible bound and may persist longer than the operation that created it.",
+      "why": "Persistent accumulation can increase memory consumption across requests or over long-running operations.",
+      "frameworks": [
+        "FastAPI",
+        "Python"
+      ],
+      "static_evidence": [
+        "append inside loop",
+        "dictionary growth inside loop",
+        "set insertion inside loop",
+        "mutation of module/global collection"
+      ],
+      "runtime_evidence": [
+        "collection_size",
+        "process_RSS",
+        "heap_allocation",
+        "object_lifetime"
+      ],
+      "false_positives": [
+        "collection is intentionally bounded",
+        "collection is required for the final response",
+        "input itself has a strict documented limit"
+      ],
+      "severity": "high",
+      "diagnostic_steps": [
+        "determine collection lifetime",
+        "measure collection size",
+        "repeat requests",
+        "observe whether memory returns to baseline"
+      ],
+      "detection": [
+        "AST",
+        "data_flow",
+        "runtime"
+      ],
+      "test_case": "Repeat the operation under a fixed workload and determine whether persistent memory usage increases over time.",
+      "literature_verification_required": true
+    },
+    {
+      "id": "ASY-001",
+      "name": "Blocking Operation in Async Request Handler",
+      "status": "extension",
+      "classification": "deterministic_heuristic",
+      "category": "async_concurrency",
+      "description": "A known blocking operation is executed directly inside an async FastAPI request handler.",
+      "why": "Blocking work can prevent the event loop from servicing other concurrent tasks.",
+      "frameworks": [
+        "FastAPI",
+        "asyncio",
+        "requests",
+        "synchronous DB drivers"
+      ],
+      "static_evidence": [
+        "async def request handler",
+        "known blocking network call",
+        "time.sleep",
+        "blocking file operation",
+        "synchronous client call"
+      ],
+      "runtime_evidence": [
+        "event_loop_lag",
+        "concurrent_request_latency",
+        "throughput",
+        "blocking_duration"
+      ],
+      "false_positives": [
+        "operation is internally offloaded",
+        "framework runs operation in a threadpool",
+        "operation is too small to create measurable contention"
+      ],
+      "severity": "high",
+      "diagnostic_steps": [
+        "identify blocking operation",
+        "inspect framework execution semantics",
+        "measure event-loop lag",
+        "run concurrent workload"
+      ],
+      "detection": [
+        "AST",
+        "framework_analysis",
+        "runtime"
+      ],
+      "test_case": "Add a controlled blocking delay and compare concurrent throughput against an async-safe implementation.",
+      "literature_verification_required": true
+    },
+    {
+      "id": "REL-001",
+      "name": "External Operation Without Explicit Timeout",
+      "status": "extension",
+      "classification": "deterministic_heuristic",
+      "category": "reliability_resource_exhaustion",
+      "description": "A supported external network operation has no visible timeout configuration.",
+      "why": "A slow dependency can keep request and connection resources occupied for an excessive period.",
+      "frameworks": [
+        "FastAPI",
+        "requests",
+        "httpx",
+        "aiohttp"
+      ],
+      "static_evidence": [
+        "network call",
+        "missing timeout argument",
+        "missing visible client timeout configuration"
+      ],
+      "runtime_evidence": [
+        "request_duration",
+        "hung_request_count",
+        "connection_occupancy",
+        "timeout_rate"
+      ],
+      "false_positives": [
+        "timeout configured globally",
+        "framework applies a default timeout",
+        "timeout is injected through another abstraction"
+      ],
+      "severity": "high",
+      "diagnostic_steps": [
+        "inspect client configuration",
+        "trace timeout propagation",
+        "inject a deliberately slow dependency",
+        "observe request/resource behavior"
+      ],
+      "detection": [
+        "AST",
+        "configuration",
+        "runtime"
+      ],
+      "test_case": "Use a dependency that delays its response and verify that the application enforces a bounded wait.",
+      "literature_verification_required": true
+    },
+    {
+      "id": "REL-002",
+      "name": "Unbounded or Aggressive Retry",
+      "status": "experimental",
+      "classification": "heuristic",
+      "category": "retry_amplification",
+      "description": "A failed operation is retried without a finite bound or without an appropriate delay/backoff.",
+      "why": "Retries can amplify downstream traffic and prolong resource occupancy.",
+      "frameworks": [
+        "FastAPI",
+        "Python",
+        "HTTP clients"
+      ],
+      "static_evidence": [
+        "exception-triggered retry loop",
+        "recursive retry",
+        "missing retry limit",
+        "retry without visible delay"
+      ],
+      "runtime_evidence": [
+        "retry_count",
+        "downstream_call_count",
+        "latency",
+        "request_amplification"
+      ],
+      "false_positives": [
+        "retry policy configured in a library",
+        "outer service controls retries",
+        "operation is deliberately retried under a bounded policy"
+      ],
+      "severity": "high",
+      "diagnostic_steps": [
+        "trace retry configuration",
+        "inject transient failures",
+        "count attempts",
+        "measure downstream call amplification"
+      ],
+      "detection": [
+        "AST",
+        "configuration",
+        "runtime"
+      ],
+      "test_case": "Force a dependency to fail repeatedly and verify that retry attempts remain bounded.",
+      "literature_verification_required": true
+    },
+    {
+      "id": "CON-001",
+      "name": "Client or Pool Created Per Request",
+      "status": "extension",
+      "classification": "heuristic",
+      "category": "connection_pool_resource_management",
+      "description": "A database or external-service client/pool is constructed inside a request handler rather than managed at an appropriate application lifecycle scope.",
+      "why": "Repeated construction can cause connection churn and unnecessary resource consumption.",
+      "frameworks": [
+        "FastAPI",
+        "SQLAlchemy",
+        "httpx",
+        "asyncpg"
+      ],
+      "static_evidence": [
+        "client construction inside endpoint",
+        "pool construction inside request path",
+        "connection creation inside request path"
+      ],
+      "runtime_evidence": [
+        "connection_creation_rate",
+        "connection_churn",
+        "pool_utilization",
+        "request_latency"
+      ],
+      "false_positives": [
+        "FastAPI dependency lifecycle manages resource reuse",
+        "framework or library owns pooling",
+        "client is intentionally short-lived"
+      ],
+      "severity": "medium",
+      "diagnostic_steps": [
+        "inspect resource lifecycle",
+        "trace connection creation",
+        "measure connection churn under concurrency"
+      ],
+      "detection": [
+        "AST",
+        "framework_analysis",
+        "runtime"
+      ],
+      "test_case": "Compare connection creation under low and high concurrent request loads.",
+      "literature_verification_required": true
+    },
+    {
+      "id": "CON-002",
+      "name": "Unbounded Concurrent Task Creation",
+      "status": "experimental",
+      "classification": "heuristic",
+      "category": "concurrency_resource_exhaustion",
+      "description": "Asynchronous tasks are created proportional to an input collection without an explicit concurrency limit.",
+      "why": "Large task sets can increase memory use and overload downstream dependencies.",
+      "frameworks": [
+        "FastAPI",
+        "asyncio"
+      ],
+      "static_evidence": [
+        "create_task over collection",
+        "gather over collection",
+        "absence of visible semaphore or concurrency limiter"
+      ],
+      "runtime_evidence": [
+        "active_task_count",
+        "memory",
+        "downstream_call_count",
+        "latency"
+      ],
+      "false_positives": [
+        "input has a strict small upper bound",
+        "downstream client limits concurrency",
+        "framework applies a concurrency limit"
+      ],
+      "severity": "high",
+      "diagnostic_steps": [
+        "determine input bounds",
+        "identify concurrency limits",
+        "measure active task count",
+        "measure memory and downstream load"
+      ],
+      "detection": [
+        "AST",
+        "framework_analysis",
+        "runtime"
+      ],
+      "test_case": "Increase input size and observe task count, memory, and downstream calls.",
+      "literature_verification_required": true
+    },
+    {
+      "id": "EXT-001",
+      "name": "External Service Call Inside Loop",
+      "status": "core",
+      "classification": "deterministic",
+      "category": "external_service_calls",
+      "description": "An external network or service call occurs once per loop iteration.",
+      "why": "External call count and dependency latency can grow with input size.",
+      "frameworks": [
+        "FastAPI",
+        "requests",
+        "httpx",
+        "aiohttp"
+      ],
+      "static_evidence": [
+        "network client call nested inside loop",
+        "loop variable used in request arguments"
+      ],
+      "runtime_evidence": [
+        "external_calls_per_request",
+        "downstream_latency",
+        "endpoint_latency"
+      ],
+      "false_positives": [
+        "service has no batch interface",
+        "calls are intentionally independent",
+        "loop cardinality is strictly bounded"
+      ],
+      "severity": "high",
+      "diagnostic_steps": [
+        "count external calls",
+        "vary input size",
+        "inspect batching capability",
+        "measure downstream and endpoint latency"
+      ],
+      "detection": [
+        "AST",
+        "runtime"
+      ],
+      "test_case": "Verify external call count for increasing input sizes.",
+      "literature_verification_required": true
+    },
+    {
+      "id": "EXT-002",
+      "name": "Sequential Independent External Calls",
+      "status": "experimental",
+      "classification": "heuristic",
+      "category": "external_service_latency",
+      "description": "Multiple external operations that appear independent are executed sequentially.",
+      "why": "Independent latency contributions can accumulate on the request critical path.",
+      "frameworks": [
+        "FastAPI",
+        "asyncio",
+        "httpx"
+      ],
+      "static_evidence": [
+        "multiple external calls in sequence",
+        "no obvious data dependency between call inputs"
+      ],
+      "runtime_evidence": [
+        "critical_path_latency",
+        "individual_call_latency",
+        "overlap_potential"
+      ],
+      "false_positives": [
+        "hidden data dependency",
+        "downstream rate limits",
+        "intentional serialization"
+      ],
+      "severity": "medium",
+      "diagnostic_steps": [
+        "construct dependency relationships",
+        "determine whether calls are independent",
+        "measure sequential critical-path latency"
+      ],
+      "detection": [
+        "AST",
+        "call_graph",
+        "runtime"
+      ],
+      "test_case": "Mock independent services with controlled latency and compare sequential and bounded-concurrent execution.",
+      "literature_verification_required": true
+    },
+    {
+      "id": "RES-001",
+      "name": "Resource Acquired Without Visible Cleanup",
+      "status": "extension",
+      "classification": "deterministic_heuristic",
+      "category": "resource_cleanup",
+      "description": "A resource is acquired without visible context management or cleanup.",
+      "why": "Repeated operations can accumulate open resources and eventually exhaust process or pool limits.",
+      "frameworks": [
+        "FastAPI",
+        "Python",
+        "database drivers",
+        "HTTP clients"
+      ],
+      "static_evidence": [
+        "open without with",
+        "connection acquisition without visible close",
+        "client construction without visible lifecycle management"
+      ],
+      "runtime_evidence": [
+        "open_file_descriptors",
+        "active_connections",
+        "pool_occupancy",
+        "resource_count_over_time"
+      ],
+      "false_positives": [
+        "framework manages lifecycle",
+        "ownership is transferred",
+        "cleanup occurs in another abstraction"
+      ],
+      "severity": "high",
+      "diagnostic_steps": [
+        "identify resource acquisition",
+        "identify resource owner",
+        "trace cleanup",
+        "repeat operation while monitoring resources"
+      ],
+      "detection": [
+        "AST",
+        "call_graph",
+        "runtime"
+      ],
+      "test_case": "Repeat the operation and verify that resource count remains bounded.",
+      "literature_verification_required": true
+    },
+    {
+      "id": "RES-002",
+      "name": "Cleanup Missing on Exceptional Path",
+      "status": "experimental",
+      "classification": "heuristic",
+      "category": "resource_cleanup",
+      "description": "Cleanup appears on the normal path but may be skipped when an exception occurs.",
+      "why": "Exceptions can leave resources active and gradually exhaust bounded resource pools.",
+      "frameworks": [
+        "FastAPI",
+        "Python",
+        "database drivers"
+      ],
+      "static_evidence": [
+        "resource acquisition",
+        "cleanup after an operation",
+        "no visible finally or context manager",
+        "potential exception between acquisition and cleanup"
+      ],
+      "runtime_evidence": [
+        "resource_count_after_failure",
+        "pool_occupancy_after_failure",
+        "open_file_descriptors_after_failure"
+      ],
+      "false_positives": [
+        "outer owner handles cleanup",
+        "framework lifecycle handles cleanup"
+      ],
+      "severity": "high",
+      "diagnostic_steps": [
+        "identify acquisition",
+        "enumerate exception paths",
+        "inject controlled failures",
+        "verify resource recovery"
+      ],
+      "detection": [
+        "AST",
+        "control_flow",
+        "runtime"
+      ],
+      "test_case": "Force exceptions repeatedly and verify that resources are released after each failure.",
+      "literature_verification_required": true
+    }
+  ],
+  "implementation_contract": {
+    "detector_output_required": [
+      "rule_id",
+      "severity",
+      "classification",
+      "file",
+      "line",
+      "function",
+      "endpoint",
+      "message",
+      "static_evidence",
+      "runtime_evidence",
+      "status"
+    ],
+    "status_values": [
+      "static_candidate",
+      "runtime_observed",
+      "correlated_finding",
+      "not_confirmed"
+    ],
+    "recommended_message_template": "Potential {category} risk: {name}. Static evidence found at {file}:{line}. Runtime confirmation is {status}.",
+    "rule_id_stability": "Rule IDs must never be reused for a different rule. If a rule changes materially, create a new ID or increment the rulebook version."
+  }
+}

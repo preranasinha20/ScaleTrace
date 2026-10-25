@@ -1,0 +1,66 @@
+{
+  "finding_id": "DB-001:app/main.py:56:17",
+  "rule_id": "DB-001",
+  "rule_name": "Database Query Inside Iterative Loop",
+  "category": "repeated_database_queries",
+  "severity": "high",
+  "classification": "deterministic",
+  "file": "app/main.py",
+  "line": 56,
+  "end_line": 56,
+  "column": 17,
+  "function": "list_order_summaries",
+  "endpoint": "GET /orders/summary",
+  "reachable_endpoints": [
+    "GET /orders/summary"
+  ],
+  "message": "Potential repeated database queries risk: Database Query Inside Iterative Loop. Static evidence found at app/main.py:56 (`db.query(...)` inside `for user in users`). Runtime confirmation is pending (no runtime evidence yet).",
+  "static_evidence": [
+    {
+      "pattern": "database call nested inside for or while loop",
+      "description": "`db.query(...)` runs on every iteration of `for user in users` (line 55); loop variable(s) `user` feed the query. `db` is treated as a database handle (annotation: Session).",
+      "snippet": "db.query(Order).filter(Order.user_id == user.id).all()",
+      "details": {
+        "access": "direct",
+        "db_operation": "query",
+        "receiver": "db",
+        "handle_inference": "annotation",
+        "handle_inference_detail": "Session",
+        "loop_variables_in_query": [
+          "user"
+        ],
+        "loop_depth": 1,
+        "innermost_loop": {
+          "kind": "for",
+          "line": 55,
+          "header": "for user in users",
+          "iterable": "users",
+          "bounded": false
+        },
+        "enclosing_loops": [
+          {
+            "kind": "for",
+            "line": 55,
+            "header": "for user in users",
+            "iterable": "users",
+            "bounded": false
+          }
+        ]
+      }
+    }
+  ],
+  "runtime_evidence": [],
+  "status": "static_candidate",
+  "possible_false_positives": [
+    "small strictly bounded loops",
+    "intentionally independent queries",
+    "data already cached by an abstraction"
+  ],
+  "verification_steps": [
+    "locate database operation",
+    "identify enclosing loop",
+    "determine possible loop cardinality",
+    "measure query count under increasing input size",
+    "compare endpoint latency and database load"
+  ]
+}

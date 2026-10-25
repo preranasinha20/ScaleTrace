@@ -1,0 +1,9 @@
+{
+  "db_handle_names": ["db", "session", "db_session", "sess", "conn", "connection", "cursor", "cur"],
+  "db_operations": [
+    "query", "execute", "exec", "executemany", "scalars", "scalar", "get", "stream",
+    "stream_scalars", "refresh", "merge", "flush", "commit",
+    "fetch", "fetchrow", "fetchval", "fetchone", "fetchall", "fetchmany"
+  ],
+  "bounded_loop_max_iterations": 10
+}

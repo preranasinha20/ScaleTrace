@@ -1,0 +1,7 @@
+{
+  "rootcause_version": "0.1",
+  "description": "Hand-written label: the per-user query loop in list_order_summaries.",
+  "symptoms": [
+    {"endpoint": "GET /orders/summary", "kind": "query_growth", "defect": "db_direct", "root_cause_functions": ["app.main:list_order_summaries"]}
+  ]
+}

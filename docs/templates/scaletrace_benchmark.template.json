@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "app_id": "bad-07",
+  "kind": "bad",
+  "description": "Orders service with an injected per-user query loop.",
+  "origin": {
+    "source": "team",
+    "author": "alice",
+    "template_family": "orders-v2",
+    "derived_from": "good-03",
+    "repo_url": null,
+    "commit": null,
+    "license": "MIT"
+  },
+  "split": "unassigned",
+  "exclusion_reason": null,
+  "run": {
+    "workload": "scaletrace_workload.json",
+    "runtime_status": "not_attempted",
+    "notes": ""
+  },
+  "defects": [
+    {
+      "defect_id": "bad-07-d1",
+      "rule_id": "DB-001",
+      "category": "repeated_database_queries",
+      "file": "app/routers/orders.py",
+      "function": "list_orders",
+      "line_start": 41,
+      "line_end": 44,
+      "endpoint": "GET /orders",
+      "symptom_kind": "query_growth",
+      "root_cause_functions": ["app.routers.orders:list_orders"],
+      "path": ["endpoint:GET /orders", "function:app.routers.orders:list_orders", "resource:database"],
+      "description": "One Order query per user inside the for loop.",
+      "verification": {
+        "static": "verified",
+        "runtime": "unverified",
+        "verified_by": "bob",
+        "date": "2026-10-28",
+        "notes": "Runtime verification pending (Phase 2 sandbox)."
+      }
+    }
+  ],
+  "known_non_defects": []
+}

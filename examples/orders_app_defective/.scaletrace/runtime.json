@@ -1,0 +1,268 @@
+{
+  "report_type": "runtime",
+  "scaletrace_version": "0.1.0",
+  "repository": "orders_app_defective",
+  "app": "app.main:app",
+  "generated_at": "2026-10-25T05:59:50+00:00",
+  "status": "completed",
+  "error": null,
+  "duration_s": 5.87,
+  "sizes": [
+    10,
+    100,
+    1000
+  ],
+  "instrumentation": {
+    "sqlalchemy_queries": true,
+    "call_tracing": true,
+    "process_resources": true
+  },
+  "endpoints": [
+    {
+      "endpoint": "GET /orders/summary",
+      "request_name": "order summary",
+      "measurements": [
+        {
+          "size": 10,
+          "requests": 5,
+          "errors": 0,
+          "status_codes": {
+            "200": 5
+          },
+          "latency_ms_mean": 8.466419999967911,
+          "latency_ms_p50": 8.454199999505363,
+          "latency_ms_p95": 8.954099999755272,
+          "throughput_rps": 96.4828154453131,
+          "queries_per_request": 11.0,
+          "query_time_ms_per_request": 1.3497000001734705,
+          "rss_mb_peak": 72.75390625,
+          "rss_mb_delta": 0.0,
+          "cpu_percent_mean": 0.0,
+          "function_calls_per_request": {
+            "app.database:get_db": 1.0,
+            "app.main:list_order_summaries": 1.0
+          },
+          "queries_by_function_per_request": {
+            "app.main:list_order_summaries": 11.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.database:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.main:list_order_summaries",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT orders.id AS orders_id, orders.user_id AS orders_user_id, orders.total AS orders_total FROM orders WHERE orders.user_id = ?",
+              "per_request": 10.0
+            },
+            {
+              "statement": "SELECT users.id AS users_id, users.name AS users_name FROM users ORDER BY users.id",
+              "per_request": 1.0
+            }
+          ]
+        },
+        {
+          "size": 100,
+          "requests": 5,
+          "errors": 0,
+          "status_codes": {
+            "200": 5
+          },
+          "latency_ms_mean": 55.99420000016835,
+          "latency_ms_p50": 56.54709999998886,
+          "latency_ms_p95": 56.8239000003814,
+          "throughput_rps": 17.179320496044834,
+          "queries_per_request": 101.0,
+          "query_time_ms_per_request": 11.837359996752639,
+          "rss_mb_peak": 73.66796875,
+          "rss_mb_delta": 0.0,
+          "cpu_percent_mean": 80.16,
+          "function_calls_per_request": {
+            "app.database:get_db": 1.0,
+            "app.main:list_order_summaries": 1.0
+          },
+          "queries_by_function_per_request": {
+            "app.main:list_order_summaries": 101.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.database:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.main:list_order_summaries",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT orders.id AS orders_id, orders.user_id AS orders_user_id, orders.total AS orders_total FROM orders WHERE orders.user_id = ?",
+              "per_request": 100.0
+            },
+            {
+              "statement": "SELECT users.id AS users_id, users.name AS users_name FROM users ORDER BY users.id",
+              "per_request": 1.0
+            }
+          ]
+        },
+        {
+          "size": 1000,
+          "requests": 5,
+          "errors": 0,
+          "status_codes": {
+            "200": 5
+          },
+          "latency_ms_mean": 563.4078600000066,
+          "latency_ms_p50": 563.4603999997125,
+          "latency_ms_p95": 611.1856999996235,
+          "throughput_rps": 1.76798880877231,
+          "queries_per_request": 1001.0,
+          "query_time_ms_per_request": 123.39912000425102,
+          "rss_mb_peak": 81.53125,
+          "rss_mb_delta": 0.00390625,
+          "cpu_percent_mean": 96.9304347826087,
+          "function_calls_per_request": {
+            "app.database:get_db": 1.0,
+            "app.main:list_order_summaries": 1.0
+          },
+          "queries_by_function_per_request": {
+            "app.main:list_order_summaries": 1001.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.database:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.main:list_order_summaries",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT orders.id AS orders_id, orders.user_id AS orders_user_id, orders.total AS orders_total FROM orders WHERE orders.user_id = ?",
+              "per_request": 1000.0
+            },
+            {
+              "statement": "SELECT users.id AS users_id, users.name AS users_name FROM users ORDER BY users.id",
+              "per_request": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /health",
+      "request_name": "health",
+      "measurements": [
+        {
+          "size": 10,
+          "requests": 5,
+          "errors": 0,
+          "status_codes": {
+            "200": 5
+          },
+          "latency_ms_mean": 1.1125400002129027,
+          "latency_ms_p50": 1.1055000004489557,
+          "latency_ms_p95": 1.160400000117079,
+          "throughput_rps": 96.4828154453131,
+          "queries_per_request": 0.0,
+          "query_time_ms_per_request": 0.0,
+          "rss_mb_peak": 72.75390625,
+          "rss_mb_delta": 0.0,
+          "cpu_percent_mean": 0.0,
+          "function_calls_per_request": {
+            "app.main:health": 1.0
+          },
+          "queries_by_function_per_request": {},
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.main:health",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": []
+        },
+        {
+          "size": 100,
+          "requests": 5,
+          "errors": 0,
+          "status_codes": {
+            "200": 5
+          },
+          "latency_ms_mean": 1.2958399998751702,
+          "latency_ms_p50": 1.3085999999020714,
+          "latency_ms_p95": 1.3474999996105907,
+          "throughput_rps": 17.179320496044834,
+          "queries_per_request": 0.0,
+          "query_time_ms_per_request": 0.0,
+          "rss_mb_peak": 73.66796875,
+          "rss_mb_delta": 0.0,
+          "cpu_percent_mean": 80.16,
+          "function_calls_per_request": {
+            "app.main:health": 1.0
+          },
+          "queries_by_function_per_request": {},
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.main:health",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": []
+        },
+        {
+          "size": 1000,
+          "requests": 5,
+          "errors": 0,
+          "status_codes": {
+            "200": 5
+          },
+          "latency_ms_mean": 1.4450400001805974,
+          "latency_ms_p50": 1.3159000000086962,
+          "latency_ms_p95": 1.9265000000814325,
+          "throughput_rps": 1.76798880877231,
+          "queries_per_request": 0.0,
+          "query_time_ms_per_request": 0.0,
+          "rss_mb_peak": 81.53125,
+          "rss_mb_delta": 0.00390625,
+          "cpu_percent_mean": 96.9304347826087,
+          "function_calls_per_request": {
+            "app.main:health": 1.0
+          },
+          "queries_by_function_per_request": {},
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.main:health",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": []
+        }
+      ]
+    }
+  ],
+  "unavailable_metrics": [
+    "external service call counts (HTTP clients are not instrumented)"
+  ],
+  "limitations": [
+    "Measurements come from one local process under a synthetic workload; they show behaviour under this workload only, not production behaviour.",
+    "CPU and memory are process-level (psutil): they cannot be attributed to individual endpoints when requests overlap, and memory includes interpreter and library overhead.",
+    "With call tracing enabled, sys.setprofile adds overhead to every Python call, so absolute latencies are inflated; growth with input size remains comparable.",
+    "Query counts and attribution cover SQLAlchemy engines only; other drivers are not instrumented."
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "app": "app.main:app",
+  "sizes": [10, 100, 500],
+  "setup": [{"method": "POST", "path": "/seed", "params": {"size": "{size}"}}],
+  "requests": [
+    {"name": "customer report", "method": "GET", "path": "/customers/report"},
+    {"name": "order counts", "method": "GET", "path": "/customers/order-counts"},
+    {"name": "order counts (eager)", "method": "GET", "path": "/customers/order-counts-fast"},
+    {"name": "customer totals", "method": "GET", "path": "/customers/totals"},
+    {"name": "search", "method": "GET", "path": "/catalog/search", "params": {"q": "number 1"}}
+  ],
+  "repetitions": 3,
+  "trace_calls": true
+}

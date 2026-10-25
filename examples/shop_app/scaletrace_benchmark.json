@@ -1,0 +1,160 @@
+{
+  "schema_version": "1.0",
+  "app_id": "shop_app",
+  "kind": "bad",
+  "description": "Multi-module demo app with one injected risk per implemented rule.",
+  "origin": {
+    "source": "example",
+    "author": "ScaleTrace maintainers",
+    "template_family": "shop",
+    "derived_from": null
+  },
+  "split": "unassigned",
+  "exclusion_reason": null,
+  "run": {
+    "workload": "scaletrace_workload.json",
+    "runtime_status": "verified",
+    "notes": "Runtime measured during development."
+  },
+  "defects": [
+    {
+      "defect_id": "shop_app-d1",
+      "rule_id": "MEM-002",
+      "category": "memory_resource_exhaustion",
+      "file": "app/routers/catalog.py",
+      "function": "search",
+      "line_start": 20,
+      "line_end": 20,
+      "endpoint": null,
+      "symptom_kind": null,
+      "root_cause_functions": [],
+      "path": [],
+      "description": "module-level RECENT_SEARCHES grows per request",
+      "verification": {
+        "static": "verified",
+        "runtime": "not_applicable",
+        "verified_by": "ScaleTrace maintainers (example fixture)",
+        "date": "2026-10-25",
+        "notes": "Growth across repeated requests is not measured by the size-sweep workload."
+      }
+    },
+    {
+      "defect_id": "shop_app-d2",
+      "rule_id": "MEM-001",
+      "category": "memory_resource_exhaustion",
+      "file": "app/routers/catalog.py",
+      "function": "search",
+      "line_start": 21,
+      "line_end": 21,
+      "endpoint": null,
+      "symptom_kind": null,
+      "root_cause_functions": [],
+      "path": [],
+      "description": "whole products table loaded",
+      "verification": {
+        "static": "verified",
+        "runtime": "not_applicable",
+        "verified_by": "ScaleTrace maintainers (example fixture)",
+        "date": "2026-10-25",
+        "notes": "Demo workload sizes do not move process memory measurably; no runtime metric confirms this label."
+      }
+    },
+    {
+      "defect_id": "shop_app-d3",
+      "rule_id": "CMP-001",
+      "category": "inefficient_computation",
+      "file": "app/routers/catalog.py",
+      "function": "search",
+      "line_start": 24,
+      "line_end": 24,
+      "endpoint": null,
+      "symptom_kind": null,
+      "root_cause_functions": [],
+      "path": [],
+      "description": "re.compile per product",
+      "verification": {
+        "static": "verified",
+        "runtime": "not_applicable",
+        "verified_by": "ScaleTrace maintainers (example fixture)",
+        "date": "2026-10-25",
+        "notes": "No measurable latency growth attributable to this pattern at demo sizes."
+      }
+    },
+    {
+      "defect_id": "shop_app-d4",
+      "rule_id": "EXT-001",
+      "category": "external_service_calls",
+      "file": "app/routers/catalog.py",
+      "function": "prices",
+      "line_start": 35,
+      "line_end": 35,
+      "endpoint": null,
+      "symptom_kind": null,
+      "root_cause_functions": [],
+      "path": [],
+      "description": "one pricing call per product",
+      "verification": {
+        "static": "verified",
+        "runtime": "not_applicable",
+        "verified_by": "ScaleTrace maintainers (example fixture)",
+        "date": "2026-10-25",
+        "notes": "External HTTP calls are not instrumented at runtime."
+      }
+    },
+    {
+      "defect_id": "shop_app-d5",
+      "rule_id": "DB-001",
+      "category": "repeated_database_queries",
+      "file": "app/routers/customers.py",
+      "function": "customer_report",
+      "line_start": 19,
+      "line_end": 19,
+      "endpoint": "GET /customers/report",
+      "symptom_kind": "query_growth",
+      "root_cause_functions": [
+        "app.routers.customers:customer_report"
+      ],
+      "path": [
+        "endpoint:GET /customers/report",
+        "function:app.routers.customers:customer_report",
+        "resource:database"
+      ],
+      "description": "indirect: orders_for_customer queries per customer",
+      "verification": {
+        "static": "verified",
+        "runtime": "verified",
+        "verified_by": "ScaleTrace maintainers (example fixture)",
+        "date": "2026-10-25",
+        "notes": ""
+      }
+    },
+    {
+      "defect_id": "shop_app-d6",
+      "rule_id": "DB-003",
+      "category": "repeated_database_queries",
+      "file": "app/routers/customers.py",
+      "function": "order_counts",
+      "line_start": 27,
+      "line_end": 27,
+      "endpoint": "GET /customers/order-counts",
+      "symptom_kind": "query_growth",
+      "root_cause_functions": [
+        "app.routers.customers:order_counts"
+      ],
+      "path": [
+        "endpoint:GET /customers/order-counts",
+        "function:app.routers.customers:order_counts",
+        "resource:database"
+      ],
+      "description": "lazy Customer.orders per customer",
+      "verification": {
+        "static": "verified",
+        "runtime": "verified",
+        "verified_by": "ScaleTrace maintainers (example fixture)",
+        "date": "2026-10-25",
+        "notes": ""
+      }
+    }
+  ],
+  "known_non_defects": []
+}

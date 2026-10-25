@@ -1,0 +1,11 @@
+{
+  "app": "app.main:app",
+  "sizes": [10, 100, 1000],
+  "setup": [{"method": "POST", "path": "/seed", "params": {"users": "{size}", "orders_per_user": 3}}],
+  "requests": [
+    {"name": "order summary", "method": "GET", "path": "/orders/summary"},
+    {"name": "health", "method": "GET", "path": "/health"}
+  ],
+  "repetitions": 5,
+  "trace_calls": true
+}

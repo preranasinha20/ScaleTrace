@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "app_id": "orders_app_fixed",
+  "kind": "good",
+  "description": "Reference variant of orders_app_defective (aggregate query).",
+  "origin": {
+    "source": "example",
+    "author": "ScaleTrace maintainers",
+    "template_family": "orders",
+    "derived_from": "orders_app_defective"
+  },
+  "split": "unassigned",
+  "exclusion_reason": null,
+  "run": {
+    "workload": "scaletrace_workload.json",
+    "runtime_status": "verified",
+    "notes": "Runtime measured during development."
+  },
+  "defects": [
+    {
+      "defect_id": "orders_app_fixed-d1",
+      "rule_id": "MEM-001",
+      "category": "memory_resource_exhaustion",
+      "file": "app/main.py",
+      "function": "list_order_summaries",
+      "line_start": 51,
+      "line_end": 51,
+      "endpoint": null,
+      "symptom_kind": null,
+      "root_cause_functions": [],
+      "path": [],
+      "description": "aggregate over all users, unbounded",
+      "verification": {
+        "static": "verified",
+        "runtime": "not_applicable",
+        "verified_by": "ScaleTrace maintainers (example fixture)",
+        "date": "2026-10-25",
+        "notes": "Demo workload sizes do not move process memory measurably; no runtime metric confirms this label."
+      }
+    }
+  ],
+  "known_non_defects": []
+}

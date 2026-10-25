@@ -1,0 +1,342 @@
+{
+  "$defs": {
+    "Finding": {
+      "additionalProperties": false,
+      "description": "A single rule match, with the evidence that supports it.",
+      "properties": {
+        "finding_id": {
+          "description": "Stable identifier: rule_id:file:line:column.",
+          "title": "Finding Id",
+          "type": "string"
+        },
+        "rule_id": {
+          "title": "Rule Id",
+          "type": "string"
+        },
+        "rule_name": {
+          "title": "Rule Name",
+          "type": "string"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "classification": {
+          "description": "Rulebook classification, e.g. deterministic or heuristic.",
+          "title": "Classification",
+          "type": "string"
+        },
+        "file": {
+          "description": "Path relative to the analyzed repository root (POSIX separators).",
+          "title": "File",
+          "type": "string"
+        },
+        "line": {
+          "title": "Line",
+          "type": "integer"
+        },
+        "end_line": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Line"
+        },
+        "column": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Column"
+        },
+        "function": {
+          "description": "Qualified name of the enclosing function, or <module>.",
+          "title": "Function",
+          "type": "string"
+        },
+        "endpoint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Endpoint(s) whose handler is, or reaches, this function, e.g. 'GET /orders'.",
+          "title": "Endpoint"
+        },
+        "reachable_endpoints": {
+          "description": "All endpoints that reach this function through the (approximate) call graph.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Reachable Endpoints",
+          "type": "array"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "static_evidence": {
+          "items": {
+            "$ref": "#/$defs/StaticEvidence"
+          },
+          "title": "Static Evidence",
+          "type": "array"
+        },
+        "runtime_evidence": {
+          "items": {
+            "$ref": "#/$defs/RuntimeEvidence"
+          },
+          "title": "Runtime Evidence",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/FindingStatus",
+          "default": "static_candidate"
+        },
+        "possible_false_positives": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Possible False Positives",
+          "type": "array"
+        },
+        "verification_steps": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Verification Steps",
+          "type": "array"
+        }
+      },
+      "required": [
+        "finding_id",
+        "rule_id",
+        "rule_name",
+        "category",
+        "severity",
+        "classification",
+        "file",
+        "line",
+        "function",
+        "message"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "FindingStatus": {
+      "description": "How far the evidence for a finding goes. Never upgraded without matching evidence.",
+      "enum": [
+        "static_candidate",
+        "runtime_observed",
+        "correlated_finding",
+        "not_confirmed"
+      ],
+      "title": "FindingStatus",
+      "type": "string"
+    },
+    "RuntimeEvidence": {
+      "additionalProperties": false,
+      "description": "One runtime measurement supporting (or weakening) a finding. Populated from Phase 4 on.",
+      "properties": {
+        "metric": {
+          "title": "Metric",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value"
+        },
+        "workload": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Workload"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        }
+      },
+      "required": [
+        "metric",
+        "value"
+      ],
+      "title": "RuntimeEvidence",
+      "type": "object"
+    },
+    "Severity": {
+      "description": "Potential magnitude of impact if the pattern matters. Not a probability.",
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "Severity",
+      "type": "string"
+    },
+    "SkippedFile": {
+      "additionalProperties": false,
+      "description": "A file that was discovered but could not be analyzed.",
+      "properties": {
+        "file": {
+          "title": "File",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "file",
+        "reason"
+      ],
+      "title": "SkippedFile",
+      "type": "object"
+    },
+    "StaticEvidence": {
+      "additionalProperties": false,
+      "description": "One piece of source-code evidence supporting a finding.",
+      "properties": {
+        "pattern": {
+          "description": "The rulebook static_evidence pattern that matched.",
+          "title": "Pattern",
+          "type": "string"
+        },
+        "description": {
+          "description": "Plain-English explanation of what was found.",
+          "title": "Description",
+          "type": "string"
+        },
+        "snippet": {
+          "description": "Short source excerpt of the matched expression.",
+          "title": "Snippet",
+          "type": "string"
+        },
+        "details": {
+          "additionalProperties": true,
+          "title": "Details",
+          "type": "object"
+        }
+      },
+      "required": [
+        "pattern",
+        "description",
+        "snippet"
+      ],
+      "title": "StaticEvidence",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Result of one static analysis run over a repository.",
+  "properties": {
+    "report_type": {
+      "const": "static_analysis",
+      "default": "static_analysis",
+      "title": "Report Type",
+      "type": "string"
+    },
+    "scaletrace_version": {
+      "title": "Scaletrace Version",
+      "type": "string"
+    },
+    "rulebook_version": {
+      "title": "Rulebook Version",
+      "type": "string"
+    },
+    "rulebook_status": {
+      "title": "Rulebook Status",
+      "type": "string"
+    },
+    "generated_at": {
+      "description": "UTC timestamp in ISO 8601 format.",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "repository": {
+      "description": "Repository directory name (absolute paths are not recorded).",
+      "title": "Repository",
+      "type": "string"
+    },
+    "files_analyzed": {
+      "title": "Files Analyzed",
+      "type": "integer"
+    },
+    "files_skipped": {
+      "items": {
+        "$ref": "#/$defs/SkippedFile"
+      },
+      "title": "Files Skipped",
+      "type": "array"
+    },
+    "config_files": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Config Files",
+      "type": "array"
+    },
+    "rules_applied": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Rules Applied",
+      "type": "array"
+    },
+    "rules_not_implemented": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Rules Not Implemented",
+      "type": "array"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "scaletrace_version",
+    "rulebook_version",
+    "rulebook_status",
+    "generated_at",
+    "repository",
+    "files_analyzed"
+  ],
+  "title": "AnalysisReport",
+  "type": "object"
+}

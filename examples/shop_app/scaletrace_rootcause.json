@@ -1,0 +1,22 @@
+{
+  "rootcause_version": "0.1",
+  "description": "Hand-written labels for the shop demo (loop owners, i.e. where the fix belongs). /catalog/search is not labelled: its CMP-001 pattern produced no measurable latency growth at the tested sizes.",
+  "symptoms": [
+    {
+      "endpoint": "GET /customers/report",
+      "kind": "query_growth",
+      "defect": "db_indirect",
+      "root_cause_functions": [
+        "app.routers.customers:customer_report"
+      ]
+    },
+    {
+      "endpoint": "GET /customers/order-counts",
+      "kind": "query_growth",
+      "defect": "db_lazy",
+      "root_cause_functions": [
+        "app.routers.customers:order_counts"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "groundtruth_version": "0.1",
+  "application": "orders_app_defective",
+  "description": "Demo app with one injected query-inside-loop defect (DB-001). Both .all() reads are unbounded (MEM-001).",
+  "rules_in_scope": [
+    "DB-001",
+    "DB-003",
+    "CMP-001",
+    "MEM-001",
+    "MEM-002",
+    "EXT-001"
+  ],
+  "expected_findings": [
+    {
+      "rule_id": "MEM-001",
+      "file": "app/main.py",
+      "function": "list_order_summaries",
+      "line": 53,
+      "note": "all users loaded"
+    },
+    {
+      "rule_id": "DB-001",
+      "file": "app/main.py",
+      "function": "list_order_summaries",
+      "line": 56,
+      "note": "db.query(Order) executed once per user in the for loop."
+    },
+    {
+      "rule_id": "MEM-001",
+      "file": "app/main.py",
+      "function": "list_order_summaries",
+      "line": 56,
+      "note": "all orders of a user loaded"
+    }
+  ]
+}

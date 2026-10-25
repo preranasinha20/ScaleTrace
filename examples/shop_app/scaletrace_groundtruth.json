@@ -1,0 +1,14 @@
+{
+  "groundtruth_version": "0.1",
+  "application": "shop_app",
+  "description": "Multi-module demo app with one injected risk per core rule (except DB-002/CMP-002). /customers/order-counts-fast and /customers/totals are correct reference implementations.",
+  "rules_in_scope": ["DB-001", "DB-003", "CMP-001", "MEM-001", "MEM-002", "EXT-001"],
+  "expected_findings": [
+    {"rule_id": "MEM-002", "file": "app/routers/catalog.py", "function": "search", "line": 20, "note": "module-level RECENT_SEARCHES grows per request"},
+    {"rule_id": "MEM-001", "file": "app/routers/catalog.py", "function": "search", "line": 21, "note": "whole products table loaded"},
+    {"rule_id": "CMP-001", "file": "app/routers/catalog.py", "function": "search", "line": 24, "note": "re.compile per product"},
+    {"rule_id": "EXT-001", "file": "app/routers/catalog.py", "function": "prices", "line": 35, "note": "one pricing call per product"},
+    {"rule_id": "DB-001", "file": "app/routers/customers.py", "function": "customer_report", "line": 19, "note": "indirect: orders_for_customer queries per customer"},
+    {"rule_id": "DB-003", "file": "app/routers/customers.py", "function": "order_counts", "line": 27, "note": "lazy Customer.orders per customer"}
+  ]
+}

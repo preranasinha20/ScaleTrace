@@ -1,0 +1,766 @@
+{
+  "report_type": "runtime",
+  "scaletrace_version": "0.1.0",
+  "repository": "shop_app",
+  "app": "app.main:app",
+  "generated_at": "2026-10-25T18:53:43+00:00",
+  "status": "completed",
+  "error": null,
+  "duration_s": 5.95,
+  "sizes": [
+    10,
+    100,
+    500
+  ],
+  "instrumentation": {
+    "sqlalchemy_queries": true,
+    "call_tracing": true,
+    "process_resources": true
+  },
+  "endpoints": [
+    {
+      "endpoint": "GET /customers/report",
+      "request_name": "customer report",
+      "measurements": [
+        {
+          "size": 10,
+          "requests": 3,
+          "errors": 0,
+          "status_codes": {
+            "200": 3
+          },
+          "latency_ms_mean": 10.702000000189097,
+          "latency_ms_p50": 10.623500000292552,
+          "latency_ms_p95": 11.083100000178092,
+          "throughput_rps": 28.341136593258113,
+          "queries_per_request": 11.0,
+          "query_time_ms_per_request": 1.8473333342020244,
+          "rss_mb_peak": 78.62890625,
+          "rss_mb_delta": 0.07421875,
+          "cpu_percent_mean": 50.75,
+          "function_calls_per_request": {
+            "app.db:get_db": 1.0,
+            "app.routers.customers:customer_report": 1.0,
+            "app.services.orders:orders_for_customer": 10.0,
+            "app.services.orders:order_total": 10.0
+          },
+          "queries_by_function_per_request": {
+            "app.routers.customers:customer_report": 1.0,
+            "app.services.orders:orders_for_customer": 10.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.db:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.routers.customers:customer_report",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "app.routers.customers:customer_report",
+              "callee": "app.services.orders:order_total",
+              "calls_per_request": 10.0
+            },
+            {
+              "caller": "app.routers.customers:customer_report",
+              "callee": "app.services.orders:orders_for_customer",
+              "calls_per_request": 10.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT orders.id AS orders_id, orders.customer_id AS orders_customer_id, orders.total AS orders_total FROM orders WHERE orders.customer_id = ? LIMIT ? OFFSET ?",
+              "per_request": 10.0
+            },
+            {
+              "statement": "SELECT customers.id AS customers_id, customers.name AS customers_name FROM customers ORDER BY customers.id LIMIT ? OFFSET ?",
+              "per_request": 1.0
+            }
+          ]
+        },
+        {
+          "size": 100,
+          "requests": 3,
+          "errors": 0,
+          "status_codes": {
+            "200": 3
+          },
+          "latency_ms_mean": 61.975499999486296,
+          "latency_ms_p50": 62.234999999418505,
+          "latency_ms_p95": 62.380399998801295,
+          "throughput_rps": 7.304756638355004,
+          "queries_per_request": 101.0,
+          "query_time_ms_per_request": 13.579966660472564,
+          "rss_mb_peak": 79.7578125,
+          "rss_mb_delta": 0.00390625,
+          "cpu_percent_mean": 85.88571428571429,
+          "function_calls_per_request": {
+            "app.db:get_db": 1.0,
+            "app.routers.customers:customer_report": 1.0,
+            "app.services.orders:orders_for_customer": 100.0,
+            "app.services.orders:order_total": 100.0
+          },
+          "queries_by_function_per_request": {
+            "app.routers.customers:customer_report": 1.0,
+            "app.services.orders:orders_for_customer": 100.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.db:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.routers.customers:customer_report",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "app.routers.customers:customer_report",
+              "callee": "app.services.orders:order_total",
+              "calls_per_request": 100.0
+            },
+            {
+              "caller": "app.routers.customers:customer_report",
+              "callee": "app.services.orders:orders_for_customer",
+              "calls_per_request": 100.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT orders.id AS orders_id, orders.customer_id AS orders_customer_id, orders.total AS orders_total FROM orders WHERE orders.customer_id = ? LIMIT ? OFFSET ?",
+              "per_request": 100.0
+            },
+            {
+              "statement": "SELECT customers.id AS customers_id, customers.name AS customers_name FROM customers ORDER BY customers.id LIMIT ? OFFSET ?",
+              "per_request": 1.0
+            }
+          ]
+        },
+        {
+          "size": 500,
+          "requests": 3,
+          "errors": 0,
+          "status_codes": {
+            "200": 3
+          },
+          "latency_ms_mean": 338.45343333390093,
+          "latency_ms_p50": 336.95500000067113,
+          "latency_ms_p95": 359.2029999999795,
+          "throughput_rps": 1.4420009204781183,
+          "queries_per_request": 501.0,
+          "query_time_ms_per_request": 77.22313333276058,
+          "rss_mb_peak": 84.48046875,
+          "rss_mb_delta": 0.3046875,
+          "cpu_percent_mean": 93.66470588235293,
+          "function_calls_per_request": {
+            "app.db:get_db": 1.0,
+            "app.routers.customers:customer_report": 1.0,
+            "app.services.orders:orders_for_customer": 500.0,
+            "app.services.orders:order_total": 500.0
+          },
+          "queries_by_function_per_request": {
+            "app.routers.customers:customer_report": 1.0,
+            "app.services.orders:orders_for_customer": 500.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.db:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.routers.customers:customer_report",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "app.routers.customers:customer_report",
+              "callee": "app.services.orders:order_total",
+              "calls_per_request": 500.0
+            },
+            {
+              "caller": "app.routers.customers:customer_report",
+              "callee": "app.services.orders:orders_for_customer",
+              "calls_per_request": 500.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT orders.id AS orders_id, orders.customer_id AS orders_customer_id, orders.total AS orders_total FROM orders WHERE orders.customer_id = ? LIMIT ? OFFSET ?",
+              "per_request": 500.0
+            },
+            {
+              "statement": "SELECT customers.id AS customers_id, customers.name AS customers_name FROM customers ORDER BY customers.id LIMIT ? OFFSET ?",
+              "per_request": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /customers/order-counts",
+      "request_name": "order counts",
+      "measurements": [
+        {
+          "size": 10,
+          "requests": 3,
+          "errors": 0,
+          "status_codes": {
+            "200": 3
+          },
+          "latency_ms_mean": 9.75543333333917,
+          "latency_ms_p50": 9.949600000254577,
+          "latency_ms_p95": 10.175800000070012,
+          "throughput_rps": 28.341136593258113,
+          "queries_per_request": 11.0,
+          "query_time_ms_per_request": 1.5847333324927604,
+          "rss_mb_peak": 78.62890625,
+          "rss_mb_delta": 0.07421875,
+          "cpu_percent_mean": 50.75,
+          "function_calls_per_request": {
+            "app.db:get_db": 1.0,
+            "app.routers.customers:order_counts": 1.0
+          },
+          "queries_by_function_per_request": {
+            "app.routers.customers:order_counts": 11.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.db:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.routers.customers:order_counts",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT orders.id, orders.customer_id, orders.total FROM orders WHERE ? = orders.customer_id",
+              "per_request": 10.0
+            },
+            {
+              "statement": "SELECT customers.id AS customers_id, customers.name AS customers_name FROM customers ORDER BY customers.id LIMIT ? OFFSET ?",
+              "per_request": 1.0
+            }
+          ]
+        },
+        {
+          "size": 100,
+          "requests": 3,
+          "errors": 0,
+          "status_codes": {
+            "200": 3
+          },
+          "latency_ms_mean": 55.686433333297224,
+          "latency_ms_p50": 56.23070000001462,
+          "latency_ms_p95": 56.578699999590754,
+          "throughput_rps": 7.304756638355004,
+          "queries_per_request": 101.0,
+          "query_time_ms_per_request": 12.337166674114997,
+          "rss_mb_peak": 79.7578125,
+          "rss_mb_delta": 0.00390625,
+          "cpu_percent_mean": 85.88571428571429,
+          "function_calls_per_request": {
+            "app.db:get_db": 1.0,
+            "app.routers.customers:order_counts": 1.0
+          },
+          "queries_by_function_per_request": {
+            "app.routers.customers:order_counts": 101.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.db:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.routers.customers:order_counts",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT orders.id, orders.customer_id, orders.total FROM orders WHERE ? = orders.customer_id",
+              "per_request": 100.0
+            },
+            {
+              "statement": "SELECT customers.id AS customers_id, customers.name AS customers_name FROM customers ORDER BY customers.id LIMIT ? OFFSET ?",
+              "per_request": 1.0
+            }
+          ]
+        },
+        {
+          "size": 500,
+          "requests": 3,
+          "errors": 0,
+          "status_codes": {
+            "200": 3
+          },
+          "latency_ms_mean": 301.2680333328414,
+          "latency_ms_p50": 309.5491999993101,
+          "latency_ms_p95": 309.95979999897827,
+          "throughput_rps": 1.4420009204781183,
+          "queries_per_request": 501.0,
+          "query_time_ms_per_request": 68.64906666851311,
+          "rss_mb_peak": 84.48046875,
+          "rss_mb_delta": 0.3046875,
+          "cpu_percent_mean": 93.66470588235293,
+          "function_calls_per_request": {
+            "app.db:get_db": 1.0,
+            "app.routers.customers:order_counts": 1.0
+          },
+          "queries_by_function_per_request": {
+            "app.routers.customers:order_counts": 501.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.db:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.routers.customers:order_counts",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT orders.id, orders.customer_id, orders.total FROM orders WHERE ? = orders.customer_id",
+              "per_request": 500.0
+            },
+            {
+              "statement": "SELECT customers.id AS customers_id, customers.name AS customers_name FROM customers ORDER BY customers.id LIMIT ? OFFSET ?",
+              "per_request": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /customers/order-counts-fast",
+      "request_name": "order counts (eager)",
+      "measurements": [
+        {
+          "size": 10,
+          "requests": 3,
+          "errors": 0,
+          "status_codes": {
+            "200": 3
+          },
+          "latency_ms_mean": 5.525633333187822,
+          "latency_ms_p50": 5.317499999364372,
+          "latency_ms_p95": 6.3176000003295485,
+          "throughput_rps": 28.341136593258113,
+          "queries_per_request": 2.0,
+          "query_time_ms_per_request": 0.42783333325739176,
+          "rss_mb_peak": 78.62890625,
+          "rss_mb_delta": 0.07421875,
+          "cpu_percent_mean": 50.75,
+          "function_calls_per_request": {
+            "app.db:get_db": 1.0,
+            "app.routers.customers:order_counts_fast": 1.0
+          },
+          "queries_by_function_per_request": {
+            "app.routers.customers:order_counts_fast": 2.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.db:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.routers.customers:order_counts_fast",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT customers.id AS customers_id, customers.name AS customers_name FROM customers ORDER BY customers.id LIMIT ? OFFSET ?",
+              "per_request": 1.0
+            },
+            {
+              "statement": "SELECT orders.customer_id, orders.id, orders.total FROM orders WHERE orders.customer_id IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+              "per_request": 1.0
+            }
+          ]
+        },
+        {
+          "size": 100,
+          "requests": 3,
+          "errors": 0,
+          "status_codes": {
+            "200": 3
+          },
+          "latency_ms_mean": 9.701533334009582,
+          "latency_ms_p50": 9.940699999788194,
+          "latency_ms_p95": 9.959000000890228,
+          "throughput_rps": 7.304756638355004,
+          "queries_per_request": 2.0,
+          "query_time_ms_per_request": 0.33179999930628884,
+          "rss_mb_peak": 79.7578125,
+          "rss_mb_delta": 0.00390625,
+          "cpu_percent_mean": 85.88571428571429,
+          "function_calls_per_request": {
+            "app.db:get_db": 1.0,
+            "app.routers.customers:order_counts_fast": 1.0
+          },
+          "queries_by_function_per_request": {
+            "app.routers.customers:order_counts_fast": 2.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.db:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.routers.customers:order_counts_fast",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT customers.id AS customers_id, customers.name AS customers_name FROM customers ORDER BY customers.id LIMIT ? OFFSET ?",
+              "per_request": 1.0
+            },
+            {
+              "statement": "SELECT orders.customer_id, orders.id, orders.total FROM orders WHERE orders.customer_id IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?",
+              "per_request": 1.0
+            }
+          ]
+        },
+        {
+          "size": 500,
+          "requests": 3,
+          "errors": 0,
+          "status_codes": {
+            "200": 3
+          },
+          "latency_ms_mean": 36.68709999995675,
+          "latency_ms_p50": 36.811400001170114,
+          "latency_ms_p95": 37.604999999530264,
+          "throughput_rps": 1.4420009204781183,
+          "queries_per_request": 2.0,
+          "query_time_ms_per_request": 0.6099000001995591,
+          "rss_mb_peak": 84.48046875,
+          "rss_mb_delta": 0.3046875,
+          "cpu_percent_mean": 93.66470588235293,
+          "function_calls_per_request": {
+            "app.db:get_db": 1.0,
+            "app.routers.customers:order_counts_fast": 1.0
+          },
+          "queries_by_function_per_request": {
+            "app.routers.customers:order_counts_fast": 2.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.db:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.routers.customers:order_counts_fast",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT customers.id AS customers_id, customers.name AS customers_name FROM customers ORDER BY customers.id LIMIT ? OFFSET ?",
+              "per_request": 1.0
+            },
+            {
+              "statement": "SELECT orders.customer_id, orders.id, orders.total FROM orders WHERE orders.customer_id IN (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?",
+              "per_request": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /customers/totals",
+      "request_name": "customer totals",
+      "measurements": [
+        {
+          "size": 10,
+          "requests": 3,
+          "errors": 0,
+          "status_codes": {
+            "200": 3
+          },
+          "latency_ms_mean": 3.770999999687774,
+          "latency_ms_p50": 3.6849999996775296,
+          "latency_ms_p95": 4.2138999997405335,
+          "throughput_rps": 28.341136593258113,
+          "queries_per_request": 1.0,
+          "query_time_ms_per_request": 0.29876666667405516,
+          "rss_mb_peak": 78.62890625,
+          "rss_mb_delta": 0.07421875,
+          "cpu_percent_mean": 50.75,
+          "function_calls_per_request": {
+            "app.db:get_db": 1.0,
+            "app.routers.customers:customer_totals": 1.0
+          },
+          "queries_by_function_per_request": {
+            "app.routers.customers:customer_totals": 1.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.db:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.routers.customers:customer_totals",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT customers.name AS customers_name, coalesce(sum(orders.total), ?) AS coalesce_1 FROM customers LEFT OUTER JOIN orders ON orders.customer_id = customers.id GROUP BY customers.id LIMIT ? OFFSET ?",
+              "per_request": 1.0
+            }
+          ]
+        },
+        {
+          "size": 100,
+          "requests": 3,
+          "errors": 0,
+          "status_codes": {
+            "200": 3
+          },
+          "latency_ms_mean": 3.5938000000896864,
+          "latency_ms_p50": 3.6189000002195826,
+          "latency_ms_p95": 3.659500000139815,
+          "throughput_rps": 7.304756638355004,
+          "queries_per_request": 1.0,
+          "query_time_ms_per_request": 0.25379999957901117,
+          "rss_mb_peak": 79.7578125,
+          "rss_mb_delta": 0.00390625,
+          "cpu_percent_mean": 85.88571428571429,
+          "function_calls_per_request": {
+            "app.db:get_db": 1.0,
+            "app.routers.customers:customer_totals": 1.0
+          },
+          "queries_by_function_per_request": {
+            "app.routers.customers:customer_totals": 1.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.db:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.routers.customers:customer_totals",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT customers.name AS customers_name, coalesce(sum(orders.total), ?) AS coalesce_1 FROM customers LEFT OUTER JOIN orders ON orders.customer_id = customers.id GROUP BY customers.id LIMIT ? OFFSET ?",
+              "per_request": 1.0
+            }
+          ]
+        },
+        {
+          "size": 500,
+          "requests": 3,
+          "errors": 0,
+          "status_codes": {
+            "200": 3
+          },
+          "latency_ms_mean": 4.378099999181965,
+          "latency_ms_p50": 4.362099998616031,
+          "latency_ms_p95": 4.476800000702497,
+          "throughput_rps": 1.4420009204781183,
+          "queries_per_request": 1.0,
+          "query_time_ms_per_request": 0.28329999986453913,
+          "rss_mb_peak": 84.48046875,
+          "rss_mb_delta": 0.3046875,
+          "cpu_percent_mean": 93.66470588235293,
+          "function_calls_per_request": {
+            "app.db:get_db": 1.0,
+            "app.routers.customers:customer_totals": 1.0
+          },
+          "queries_by_function_per_request": {
+            "app.routers.customers:customer_totals": 1.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.db:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.routers.customers:customer_totals",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT customers.name AS customers_name, coalesce(sum(orders.total), ?) AS coalesce_1 FROM customers LEFT OUTER JOIN orders ON orders.customer_id = customers.id GROUP BY customers.id LIMIT ? OFFSET ?",
+              "per_request": 1.0
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "endpoint": "GET /catalog/search",
+      "request_name": "search",
+      "measurements": [
+        {
+          "size": 10,
+          "requests": 3,
+          "errors": 0,
+          "status_codes": {
+            "200": 3
+          },
+          "latency_ms_mean": 3.817433333703472,
+          "latency_ms_p50": 3.510300000925781,
+          "latency_ms_p95": 4.446500000995002,
+          "throughput_rps": 28.341136593258113,
+          "queries_per_request": 1.0,
+          "query_time_ms_per_request": 0.22963333382601073,
+          "rss_mb_peak": 78.62890625,
+          "rss_mb_delta": 0.07421875,
+          "cpu_percent_mean": 50.75,
+          "function_calls_per_request": {
+            "app.db:get_db": 1.0,
+            "app.routers.catalog:search": 1.0
+          },
+          "queries_by_function_per_request": {
+            "app.routers.catalog:search": 1.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.db:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.routers.catalog:search",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT products.id AS products_id, products.sku AS products_sku, products.title AS products_title FROM products",
+              "per_request": 1.0
+            }
+          ]
+        },
+        {
+          "size": 100,
+          "requests": 3,
+          "errors": 0,
+          "status_codes": {
+            "200": 3
+          },
+          "latency_ms_mean": 4.702866666169332,
+          "latency_ms_p50": 4.6404999993683305,
+          "latency_ms_p95": 4.883300000074087,
+          "throughput_rps": 7.304756638355004,
+          "queries_per_request": 1.0,
+          "query_time_ms_per_request": 0.15423333388753235,
+          "rss_mb_peak": 79.7578125,
+          "rss_mb_delta": 0.00390625,
+          "cpu_percent_mean": 85.88571428571429,
+          "function_calls_per_request": {
+            "app.db:get_db": 1.0,
+            "app.routers.catalog:search": 1.0
+          },
+          "queries_by_function_per_request": {
+            "app.routers.catalog:search": 1.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.db:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.routers.catalog:search",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT products.id AS products_id, products.sku AS products_sku, products.title AS products_title FROM products",
+              "per_request": 1.0
+            }
+          ]
+        },
+        {
+          "size": 500,
+          "requests": 3,
+          "errors": 0,
+          "status_codes": {
+            "200": 3
+          },
+          "latency_ms_mean": 11.543799999344628,
+          "latency_ms_p50": 11.413499998525367,
+          "latency_ms_p95": 12.067699999533943,
+          "throughput_rps": 1.4420009204781183,
+          "queries_per_request": 1.0,
+          "query_time_ms_per_request": 0.23483333340360937,
+          "rss_mb_peak": 84.48046875,
+          "rss_mb_delta": 0.3046875,
+          "cpu_percent_mean": 93.66470588235293,
+          "function_calls_per_request": {
+            "app.db:get_db": 1.0,
+            "app.routers.catalog:search": 1.0
+          },
+          "queries_by_function_per_request": {
+            "app.routers.catalog:search": 1.0
+          },
+          "call_edges": [
+            {
+              "caller": "<request>",
+              "callee": "app.db:get_db",
+              "calls_per_request": 1.0
+            },
+            {
+              "caller": "<request>",
+              "callee": "app.routers.catalog:search",
+              "calls_per_request": 1.0
+            }
+          ],
+          "top_statements": [
+            {
+              "statement": "SELECT products.id AS products_id, products.sku AS products_sku, products.title AS products_title FROM products",
+              "per_request": 1.0
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "unavailable_metrics": [
+    "external service call counts (HTTP clients are not instrumented)"
+  ],
+  "limitations": [
+    "Measurements come from one local process under a synthetic workload; they show behaviour under this workload only, not production behaviour.",
+    "CPU and memory are process-level (psutil): they cannot be attributed to individual endpoints when requests overlap, and memory includes interpreter and library overhead.",
+    "With call tracing enabled, sys.setprofile adds overhead to every Python call, so absolute latencies are inflated; growth with input size remains comparable.",
+    "Query counts and attribution cover SQLAlchemy engines only; other drivers are not instrumented."
+  ]
+}
