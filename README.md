@@ -1,8 +1,99 @@
 # ScaleTrace
 
+**Repository:** <https://github.com/preranasinha20/ScaleTrace>
+
 Research prototype that identifies and explains scalability risks in Python/FastAPI backends. It
 combines **static source-code evidence**, **runtime execution evidence** and a **knowledge graph**
 of the application, and adds a **graph neural network** that learns to rank probable root causes.
+
+## Quick start (run it locally in about 5 minutes)
+
+You need **Git**, **Python 3.10 or newer** and **Node.js 18 or newer** (which includes npm).
+
+| | macOS | Windows |
+|---|---|---|
+| Git | `xcode-select --install` (or `brew install git`) | <https://git-scm.com/download/win> |
+| Python | <https://www.python.org/downloads/> or `brew install python` | <https://www.python.org/downloads/> (tick **Add python.exe to PATH**) |
+| Node.js | <https://nodejs.org> (LTS) or `brew install node` | <https://nodejs.org> (LTS) |
+
+Check them in a terminal: `git --version`, `python3 --version` (Windows: `py --version`), `node --version`.
+
+**1. Get the code**
+
+```bash
+git clone https://github.com/preranasinha20/ScaleTrace.git
+cd ScaleTrace
+```
+
+**2. Start the web app with one command**
+
+macOS or Linux (Terminal):
+
+```bash
+sh scripts/run_local.sh
+```
+
+Windows (PowerShell):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run_local.ps1
+```
+
+The script creates a virtual environment in `.venv`, installs ScaleTrace with its web API, builds the
+frontend and starts the server. When it prints `ScaleTrace is running`, open <http://127.0.0.1:8000>.
+Press `Ctrl+C` to stop it. Running the script again reuses `.venv` and starts faster.
+
+**3. Try it.** The `examples/shop_app` demo opens by default. Choose **Upload ZIP** to analyse a ZIP of your
+own FastAPI project; its code is only parsed, never run.
+
+To use another port: `PORT=8010 sh scripts/run_local.sh` (macOS/Linux) or
+`powershell -ExecutionPolicy Bypass -File scripts\run_local.ps1 -Port 8010` (Windows).
+
+### Manual setup (if you prefer not to use the script)
+
+macOS or Linux:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -e ".[api]"          # ScaleTrace + the web API
+npm --prefix frontend ci
+npm --prefix frontend run build
+python -m scaletrace.api                   # http://127.0.0.1:8000
+```
+
+Windows (PowerShell):
+
+```powershell
+py -m venv .venv
+.venv\Scripts\Activate.ps1                 # if blocked: Set-ExecutionPolicy -Scope Process Bypass
+python -m pip install --upgrade pip
+python -m pip install -e ".[api]"
+npm --prefix frontend ci
+npm --prefix frontend run build
+python -m scaletrace.api                   # http://127.0.0.1:8000
+```
+
+After the first setup you only need to activate the environment and run `python -m scaletrace.api`
+(rebuild the frontend only when `frontend/` changes).
+
+### Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `python3: command not found` (macOS) | Install Python from python.org or `brew install python`, then open a new terminal. |
+| `python` opens the Microsoft Store (Windows) | Use `py` instead, or install Python from python.org with **Add to PATH** ticked. |
+| `npm: command not found` | Install Node.js LTS from <https://nodejs.org>, then open a new terminal. |
+| PowerShell says running scripts is disabled | Use the `powershell -ExecutionPolicy Bypass -File ...` command above, or `Set-ExecutionPolicy -Scope Process Bypass`. |
+| `Address already in use` / port 8000 busy | Start on another port (see above), or stop the other program using 8000. |
+| The page says it cannot reach the API | The server is not running: start it again and keep that terminal open. |
+| Blank page or `index.html` missing | Run `npm --prefix frontend run build` again. |
+
+**What is not in the repository.** The research benchmark (`benchmark_data/`, third-party apps) and trained
+model files (`scaletrace_output/`) are not published. The web app, the CLI, the demo projects and the test
+suite work without them. The learned (GNN) ranker shows up only if you train models yourself
+([docs/ml.md](docs/ml.md)); otherwise the heuristic ranking is used.
 
 > Status: research prototype. Six core rules, the knowledge graph, runtime testing, correlation,
 > backtracking diagnosis, reports, evaluation, the GNN ranker and a Streamlit UI are implemented.
@@ -31,42 +122,47 @@ Example (`examples/orders_app_defective`, with runtime evidence):
   probable cause, not a proof of causality.
 ```
 
-## Setup
+## Full developer setup (CLI, tests, Streamlit, deep learning)
 
-Python 3.10+ (developed on 3.13, Windows).
+The Quick start installs only what the web app needs. For everything else, activate the environment first
+(macOS/Linux: `source .venv/bin/activate`; Windows: `.venv\Scripts\Activate.ps1`), then:
 
 ```bash
-python -m venv .venv
-.venv\Scripts\activate                 # macOS/Linux: source .venv/bin/activate
-pip install -e ".[dev,demo,runtime]"   # core + tests + demo apps + runtime testing
-pip install torch --index-url https://download.pytorch.org/whl/cpu   # deep learning (CPU)
-pip install -e ".[ml,ui]"              # numpy + Streamlit UI
+python -m pip install -e ".[api,dev,demo,runtime,ui]"   # web API, tests, demo apps, runtime testing, Streamlit
 ```
+
+Deep learning (optional, CPU is enough):
+
+```bash
+# macOS (Intel or Apple Silicon)
+python -m pip install torch
+# Windows and Linux (CPU-only wheels)
+python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+# then, on every system
+python -m pip install -e ".[ml]"
+```
+
+Developed with Python 3.13 on Windows. The code has no platform-specific parts, and the same commands
+work on macOS and Linux.
 
 ## Web app (TypeScript frontend, preferred)
 
 A React + TypeScript frontend (`frontend/`) talks to a thin FastAPI adapter (`scaletrace/api/`) that calls the
-same pipeline as the Streamlit UI. It never runs project code. Setup, commands, configuration and the launch
-checklist are in [docs/frontend.md](docs/frontend.md). The quick version (Windows, from the repository root):
+same pipeline as the Streamlit UI. It never runs project code. Run it with the Quick start above. Development
+mode (hot reload), configuration and the API are described in [docs/frontend.md](docs/frontend.md).
 
-```bash
-.venv\Scripts\python -m pip install -e ".[api]"
-npm --prefix frontend install
-npm --prefix frontend run build
-.venv\Scripts\python -m scaletrace.api
-```
-
-Then open <http://127.0.0.1:8000>. Besides the demo projects, the web app accepts a ZIP of a FastAPI project
+Besides the demo projects, the web app accepts a ZIP of a FastAPI project
 (**Upload ZIP**): Python and config files are extracted safely into a temporary folder, analysed statically and
 deleted. Nothing from the archive is run. Accepted structure, limits and configuration are in
 [docs/frontend.md](docs/frontend.md#zip-upload).
 
 ## Demo (Streamlit fallback UI)
 
-The Streamlit UI remains available as a fallback. From the repository root, after Setup:
+The Streamlit UI remains available as a fallback. From the repository root, with the environment active and
+the `ui` extra installed (see Full developer setup):
 
 ```bash
-.venv\Scripts\python -m streamlit run scaletrace/app/streamlit_app.py
+python -m streamlit run scaletrace/app/streamlit_app.py
 ```
 
 Then open <http://127.0.0.1:8501>. `.streamlit/config.toml` keeps the server local-only (127.0.0.1) and headless.
@@ -144,10 +240,14 @@ scaletrace ml experiment --train data/train --style-test data/test_B --out resul
 
 ## Tests
 
+With the environment active and the `dev` extra installed (see Full developer setup):
+
 ```bash
-pytest                      # all tests
-pytest -m "not runtime"     # skip the test that executes a demo app
+python -m pytest                      # all tests
+python -m pytest -m "not runtime"     # skip the test that executes a demo app
 ```
+
+Tests that need an optional extra (Streamlit, torch, the demo apps' dependencies) are skipped when it is missing.
 
 ## Repository layout
 
