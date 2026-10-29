@@ -290,3 +290,179 @@ def test_parent_router_prefix_applies_to_included_routers(tmp_path):
         """,
     })
     assert "POST /api/user/bulk" in run_static_analysis(tmp_path).project.endpoints()
+
+
+def test_route_handlers_sharing_a_name_are_all_analysed(tmp_path):
+    _write(tmp_path, {"main.py": """
+        from fastapi import FastAPI
+
+        app = FastAPI()
+
+        @app.get("/items")
+        def read_item(db):
+            return db.query(Item).all()
+
+        @app.get("/items/{item_id}")
+        def read_item(item_id, db):
+            return db.query(Item).get(item_id)
+
+        def helper():
+            return 1
+
+        def helper():
+            return 2
+    """})
+    project = run_static_analysis(tmp_path).project
+    endpoints = project.endpoints()
+    assert endpoints["GET /items"].qualname == "read_item@L6" and endpoints["GET /items/{item_id}"].qualname == "read_item"
+    assert "main:helper" in project.functions and not any("helper@" in f for f in project.functions)
+
+
+def test_reviewer_added_items_are_not_duplicated_on_reapply(candidate_app, tmp_path):
+    candidate, apps = candidate_app
+    _, js = write_review(candidate, apps / candidate.app_id, tmp_path / "review")
+    data = json.loads(js.read_text())
+    extra = {**data["items"][0], "item_id": "x01", "sources": ["reviewer"], "decision": "defect", "reason": "missed by ScaleTrace"}
+    data["items"].append(extra)
+    js.write_text(json.dumps(data))
+    apply_review(js, apps, RULEBOOK)
+    apply_review(js, apps, RULEBOOK)
+    assert [d.defect_id for d in load_manifest(apps / candidate.app_id).defects] == ["bad-cand-099-x01"]
+
+
+def test_include_router_prefix_from_constants_and_fstrings(tmp_path):
+    _write(tmp_path, {
+        "app/__init__.py": "",
+        "app/config.py": 'API_PREFIX = "/api/v1"\n',
+        "app/users.py": """
+            from fastapi import APIRouter
+
+            router = APIRouter(prefix="")
+
+            @router.get("/{user_id}")
+            def read_user(user_id):
+                return user_id
+        """,
+        "app/roles.py": """
+            from fastapi import APIRouter
+
+            router = APIRouter()
+
+            @router.get("/{role_id}")
+            def read_role(role_id):
+                return role_id
+        """,
+        "app/main.py": """
+            from fastapi import FastAPI
+            from app.config import API_PREFIX
+            from app.users import router as user_router
+            from app.roles import router as role_router
+
+            app = FastAPI()
+            app.include_router(user_router, prefix=f"{API_PREFIX}/users")
+            app.include_router(role_router, prefix=API_PREFIX + "/roles")
+        """,
+    })
+    endpoints = run_static_analysis(tmp_path).project.endpoints()
+    assert endpoints["GET /api/v1/users/{user_id}"].qualname == "read_user"
+    assert endpoints["GET /api/v1/roles/{role_id}"].qualname == "read_role"
+
+
+def test_include_router_with_router_keyword(tmp_path):
+    _write(tmp_path, {"main.py": """
+        from fastapi import APIRouter, FastAPI
+
+        users = APIRouter()
+
+        @users.get("/{username}")
+        def profile(username):
+            return username
+
+        api = APIRouter()
+        api.include_router(router=users, prefix="/profiles")
+        app = FastAPI()
+        app.include_router(api, prefix="/api")
+    """})
+    assert "GET /api/profiles/{username}" in run_static_analysis(tmp_path).project.endpoints()
+
+
+# --- lock: labels frozen, verification sign-offs allowed and logged --------------------------------
+
+def _locked_with_review(candidate_app, tmp_path):
+    from scaletrace.benchmark.cli import _load_all
+    from scaletrace.benchmark.loader import load_index, save_index
+    from scaletrace.benchmark.split import build_index, lock_index
+
+    candidate, apps = candidate_app
+    _, js = write_review(candidate, apps / candidate.app_id, tmp_path / "review")
+    _fill(js, **{"reviewer": "Claude (AI-assisted draft; not a verifier)", "app.decision": "keep", "app.notes": "draft",
+                 "items.0.decision": "defect", "items.0.reason": "Loads every user; no limit.", "items.0.endpoint": "GET /user/all"})
+    apply_review(js, apps, RULEBOOK)
+    save_index(apps, build_index(apps, _load_all(apps), 0.0, 0, ["template_family", "derived_from"]))
+    lock_index(apps, load_index(apps))
+    return candidate, apps, js
+
+
+def _codes(apps, level):
+    from scaletrace.benchmark.validate import validate_benchmark
+    return validate_benchmark(apps, RULEBOOK, check_duplicates=False).codes(level)
+
+
+def test_signoff_after_lock_is_allowed_and_logged(candidate_app, tmp_path):
+    from scaletrace.benchmark.schema import SIGNOFF_LOG
+
+    candidate, apps, js = _locked_with_review(candidate_app, tmp_path)
+    assert "lock_violation" not in _codes(apps, "error")
+    summary = apply_review(_fill(js, **{"items.0.static_verified_by": "Ravi", "review_date": "2026-10-27"}), apps, RULEBOOK)
+    [defect] = load_manifest(apps / candidate.app_id).defects
+    assert summary["signoffs_logged"] == 1 and defect.verification.static == "verified" and defect.verification.verified_by == "Ravi"
+    [entry] = [json.loads(line) for line in (apps / SIGNOFF_LOG).read_text().splitlines()]
+    assert entry["before"]["static"] == "unverified" and entry["after"] == {"static": "verified", "runtime": "unverified", "verified_by": "Ravi"}
+    assert "lock_violation" not in _codes(apps, "error") and "verification_signed_off" in _codes(apps, "warning")
+    apply_review(js, apps, RULEBOOK)  # re-applying the same sign-off logs nothing new and keeps notes single
+    assert len((apps / SIGNOFF_LOG).read_text().splitlines()) == 1
+    assert load_manifest(apps / candidate.app_id).run.notes.count("Reviewer:") == 1
+
+
+def test_label_change_after_lock_is_refused(candidate_app, tmp_path):
+    candidate, apps, js = _locked_with_review(candidate_app, tmp_path)
+    before = (apps / candidate.app_id / MANIFEST_FILE).read_text()
+    with pytest.raises(ReviewError, match="labels are frozen"):
+        apply_review(_fill(js, **{"items.0.endpoint": "GET /other"}), apps, RULEBOOK)
+    assert (apps / candidate.app_id / MANIFEST_FILE).read_text() == before
+
+
+def test_unlogged_verification_edit_breaks_the_lock(candidate_app, tmp_path):
+    candidate, apps, _ = _locked_with_review(candidate_app, tmp_path)
+    path = apps / candidate.app_id / MANIFEST_FILE
+    data = json.loads(path.read_text())
+    data["defects"][0]["verification"].update({"static": "verified", "verified_by": "Ravi"})
+    path.write_text(json.dumps(data))
+    assert "lock_violation" in _codes(apps, "error")
+
+
+@pytest.mark.parametrize("verifier", ["Asha", "claude"])
+def test_reviewer_cannot_verify_own_review(candidate_app, tmp_path, verifier):
+    candidate, apps = candidate_app
+    _, js = write_review(candidate, apps / candidate.app_id, tmp_path / "review")
+    _fill(js, **{"reviewer": "Asha", "items.0.decision": "defect", "items.0.reason": "r", "items.0.static_verified_by": verifier})
+    with pytest.raises(ReviewError, match="second person"):
+        apply_review(js, apps, RULEBOOK)
+
+
+def test_second_person_can_reject_after_lock(candidate_app, tmp_path):
+    from scaletrace.benchmark.loader import positive_defects
+
+    candidate, apps, js = _locked_with_review(candidate_app, tmp_path)
+    apply_review(_fill(js, **{"items.0.static_rejected_by": "Ravi"}), apps, RULEBOOK)
+    manifest = load_manifest(apps / candidate.app_id)
+    assert manifest.defects[0].verification.static == "rejected" and positive_defects(manifest, "source") == []
+    assert "lock_violation" not in _codes(apps, "error")
+
+
+def test_recorded_tier_counts_every_non_rejected_defect():
+    manifest = AppManifest(app_id="x", kind="bad", origin=Origin(source="team"), defects=[
+        _defect("x-1", "verified", "unverified"), _defect("x-2", "unverified", "unverified"), _defect("x-3", "rejected", "unverified"),
+    ])
+    assert [d.defect_id for d in positive_defects(manifest, "recorded")] == ["x-1", "x-2"]
+    assert [d.defect_id for d in positive_defects(manifest, "source")] == ["x-1"]

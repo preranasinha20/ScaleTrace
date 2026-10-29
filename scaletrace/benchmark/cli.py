@@ -167,6 +167,7 @@ def _cmd_split(args) -> int:
 
 def _cmd_lock(args) -> int:
     from scaletrace.benchmark.loader import load_index
+    from scaletrace.benchmark.schema import SIGNOFF_LOG
     from scaletrace.benchmark.split import lock_index
 
     root = Path(args.root)
@@ -175,7 +176,7 @@ def _cmd_lock(args) -> int:
         print("error: no benchmark_index.json; run `scaletrace benchmark split` first", file=sys.stderr)
         return EXIT_USAGE
     index = lock_index(root, index)
-    print(f"Locked {len(index.lock.apps)} test app(s) at {index.lock.locked_at}. Any later change to them fails validation.")
+    print(f"Locked {len(index.lock.apps)} test app(s) at {index.lock.locked_at}. Labels and sources are frozen; only verification sign-offs via apply-review are allowed, and each is logged in {SIGNOFF_LOG}.")
     return EXIT_OK
 
 

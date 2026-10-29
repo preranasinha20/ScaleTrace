@@ -1,0 +1,10 @@
+# Local demo defaults (also applied by a plain `streamlit run`).
+[server]
+address = "127.0.0.1"
+headless = true
+
+[browser]
+gatherUsageStats = false
+
+[client]
+toolbarMode = "minimal"

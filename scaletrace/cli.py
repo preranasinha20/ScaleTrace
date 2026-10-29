@@ -83,7 +83,7 @@ def _build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--csv", metavar="FILE", help="Export per-rule/category metrics as CSV.")
     evaluate.add_argument("--manifest", action="store_true", help="Use scaletrace_benchmark.json; only fully verified defects count.")
     evaluate.add_argument("--final", action="store_true", help="Allow locked test-split apps (logged in final_runs.log).")
-    evaluate.add_argument("--level", choices=["both", "source", "runtime"], default="both",
+    evaluate.add_argument("--level", choices=["both", "all", "recorded", "source", "runtime"], default="both",
                           help="Manifest mode: which verification tier counts as positive (default: report both, separately).")
     _add_static_options(evaluate)
 
@@ -230,7 +230,7 @@ def _cmd_evaluate(args: argparse.Namespace) -> int:
     rulebook = load_rulebook(args.rulebook)
     results = {}
     unverified: dict[str, int] = {}
-    levels = ["source", "runtime"] if args.level == "both" else [args.level]
+    levels = {"both": ["source", "runtime"], "all": ["recorded", "source", "runtime"]}.get(args.level, [args.level])
     tiered: dict[str, dict] = {level: {} for level in levels}
     if args.manifest:
         from scaletrace.benchmark.guard import check_access, classify, record_final_run
@@ -260,7 +260,8 @@ def _cmd_evaluate(args: argparse.Namespace) -> int:
         pending = ", ".join(f"{a}={n}" for a, n in unverified.items() if n)
         print(f"Defects not source-confirmed (never counted): {pending or 'none'}")
         for level in levels:
-            title = {"source": "SOURCE-CONFIRMED tier (pattern confirmed in code; says nothing about runtime impact)",
+            title = {"recorded": "RECORDED-LABELS tier (frozen labels as drafted; not independently verified)",
+                     "source": "SOURCE-CONFIRMED tier (pattern confirmed in code; says nothing about runtime impact)",
                      "runtime": "RUNTIME-VERIFIED tier (also confirmed at runtime, or no runtime metric exists)"}[level]
             print(f"\n=== {title} ===")
             evaluation = evaluate(tiered[level], rulebook)

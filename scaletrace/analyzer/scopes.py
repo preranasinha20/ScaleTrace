@@ -151,4 +151,10 @@ def collect_scopes(tree: ast.Module) -> list[FunctionScope]:
                         visit([s for group in inner for s in group], prefix, class_name)
 
     visit(tree.body, "", None)
+    # A later `def` with the same name rebinds it, so the last definition keeps the plain qualname. Earlier
+    # route handlers are still registered by FastAPI's decorator, so they stay as `name@L<line>`.
+    last = {scope.qualname: scope for scope in scopes}
+    for scope in scopes:
+        if scope.routes and last[scope.qualname] is not scope:
+            scope.qualname = f"{scope.qualname}@L{scope.node.lineno}"
     return scopes

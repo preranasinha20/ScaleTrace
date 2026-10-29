@@ -117,6 +117,8 @@ class ProjectIndex:
         self.db = DbHandleInference(config)
         self.http = ExternalCallInference(config)
         self.walker = LoopWalker(config.bounded_loop_max_iterations)
+        for module in modules:
+            self.walker.register_module(module.tree)
 
         self.modules: dict[str, ModuleContext] = {module_name_for(m.rel_path): m for m in modules}
         self.functions: dict[str, FunctionInfo] = {}
@@ -237,6 +239,38 @@ class ProjectIndex:
                 return f"{target}:{node.attr}"
         return None
 
+    def _string_value(self, module: str, node: ast.AST | None, depth: int = 0) -> str | None:
+        """A string literal, a module-level string constant (local or imported), an f-string or `+` of those."""
+        if node is None or depth > 4:
+            return None
+        if isinstance(node, ast.Constant):
+            return node.value if isinstance(node.value, str) else None
+        if isinstance(node, ast.JoinedStr):
+            parts = []
+            for part in node.values:
+                if isinstance(part, ast.FormattedValue):
+                    if part.conversion != -1 or part.format_spec is not None:
+                        return None
+                    part = part.value
+                text = self._string_value(module, part, depth + 1)
+                if text is None:
+                    return None
+                parts.append(text)
+            return "".join(parts)
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            left, right = self._string_value(module, node.left, depth + 1), self._string_value(module, node.right, depth + 1)
+            return None if left is None or right is None else left + right
+        target = self._variable(module, node)
+        if target is None:
+            return None
+        owner, _, name = target.partition(":")
+        ctx = self.modules.get(owner)
+        if ctx is None:
+            return None
+        values = [stmt.value for stmt in ctx.tree.body if isinstance(stmt, ast.Assign) and len(stmt.targets) == 1
+                  and isinstance(stmt.targets[0], ast.Name) and stmt.targets[0].id == name]
+        return self._string_value(owner, values[0], depth + 1) if len(values) == 1 else None
+
     def _resolve_routes(self) -> None:
         """Add ``add_api_route`` registrations and apply ``include_router(..., prefix=...)`` prefixes.
 
@@ -278,11 +312,10 @@ class ProjectIndex:
                         route = Route(method, path, router)
                         if route not in registered.setdefault(target, []):
                             registered[target].append(route)
-                elif node.func.attr == "include_router" and node.args:
-                    child = self._variable(module, node.args[0])
+                elif node.func.attr == "include_router" and (node.args or "router" in keywords):
+                    child = self._variable(module, node.args[0] if node.args else keywords["router"])
                     parent = self._variable(module, node.func.value)
-                    prefix = keywords.get("prefix")
-                    text = prefix.value if isinstance(prefix, ast.Constant) and isinstance(prefix.value, str) else ""
+                    text = self._string_value(module, keywords.get("prefix")) or ""
                     if child is not None:
                         includes.setdefault(child, []).append((parent or "", text))
 

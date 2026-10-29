@@ -20,7 +20,7 @@ from pathlib import Path
 
 from pydantic import ValidationError
 
-from scaletrace.benchmark.schema import INDEX_FILE, MANIFEST_FILE, AppManifest, BenchmarkIndex, Defect
+from scaletrace.benchmark.schema import INDEX_FILE, MANIFEST_FILE, REVIEW_COPY, AppManifest, BenchmarkIndex, Defect
 from scaletrace.evaluation.groundtruth import ExpectedFinding, GroundTruth
 
 HASH_SKIP_DIRS = {"__pycache__", "node_modules", "venv", "env"}
@@ -95,6 +95,24 @@ def file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def labels_sha256(manifest: AppManifest) -> str:
+    """Hash of what the labels say: everything except verification states and free-text notes.
+
+    Frozen by the lock. Excluded: ``description`` and ``run`` (provenance text rewritten by apply-review) and each
+    defect's ``verification`` (who confirmed it and when), which a second person may add after the lock.
+    """
+    data = manifest.model_dump(mode="json", exclude={"description", "run"})
+    for defect in data["defects"]:
+        defect.pop("verification", None)
+    return hashlib.sha256(json.dumps(data, sort_keys=True).encode("utf-8")).hexdigest()
+
+
+def verification_state(manifest: AppManifest) -> dict[str, dict]:
+    """defect_id -> the verification fields a sign-off may change."""
+    return {d.defect_id: {"static": d.verification.static, "runtime": d.verification.runtime,
+                          "verified_by": d.verification.verified_by} for d in manifest.defects}
+
+
 def source_sha256(app_dir: str | Path) -> str:
     """Hash of every source/config file in the application (paths and contents), excluding caches."""
     app_dir = Path(app_dir)
@@ -103,7 +121,7 @@ def source_sha256(app_dir: str | Path) -> str:
         dirnames[:] = sorted(d for d in dirnames if not d.startswith(".") and d not in HASH_SKIP_DIRS)
         for name in sorted(filenames):
             path = Path(dirpath) / name
-            if path.suffix not in HASHED_SUFFIXES or name == MANIFEST_FILE:
+            if path.suffix not in HASHED_SUFFIXES or name in (MANIFEST_FILE, REVIEW_COPY):
                 continue
             digest.update(path.relative_to(app_dir).as_posix().encode("utf-8"))
             digest.update(b"\0")

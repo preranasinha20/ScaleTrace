@@ -43,6 +43,49 @@ pip install torch --index-url https://download.pytorch.org/whl/cpu   # deep lear
 pip install -e ".[ml,ui]"              # numpy + Streamlit UI
 ```
 
+## Web app (TypeScript frontend, preferred)
+
+A React + TypeScript frontend (`frontend/`) talks to a thin FastAPI adapter (`scaletrace/api/`) that calls the
+same pipeline as the Streamlit UI. It never runs project code. Setup, commands, configuration and the launch
+checklist are in [docs/frontend.md](docs/frontend.md). The quick version (Windows, from the repository root):
+
+```bash
+.venv\Scripts\python -m pip install -e ".[api]"
+npm --prefix frontend install
+npm --prefix frontend run build
+.venv\Scripts\python -m scaletrace.api
+```
+
+Then open <http://127.0.0.1:8000>. Besides the demo projects, the web app accepts a ZIP of a FastAPI project
+(**Upload ZIP**): Python and config files are extracted safely into a temporary folder, analysed statically and
+deleted. Nothing from the archive is run. Accepted structure, limits and configuration are in
+[docs/frontend.md](docs/frontend.md#zip-upload).
+
+## Demo (Streamlit fallback UI)
+
+The Streamlit UI remains available as a fallback. From the repository root, after Setup:
+
+```bash
+.venv\Scripts\python -m streamlit run scaletrace/app/streamlit_app.py
+```
+
+Then open <http://127.0.0.1:8501>. `.streamlit/config.toml` keeps the server local-only (127.0.0.1) and headless.
+
+1. **Project:** pick a demo project (`examples/shop_app` is the default; `orders_app_defective` and
+   `orders_app_fixed` form a before/after pair). Benchmark repositories are never offered in the UI.
+2. **Runtime evidence:** the demo apps ship a cached runtime report, which is used by default. "Run workload now"
+   executes the app's code and needs the confirmation checkbox.
+3. **Ranking:** keep the heuristic ranking, or pick a v5 GNN checkpoint. Optionally enter a slow endpoint.
+4. Tabs:
+   - **Overview:** risk paths and the top root causes.
+   - **Knowledge graph:** interactive; click nodes.
+   - **Root causes:** the ranked candidates with evidence steps.
+   - **Findings:** filterable, with code snippets.
+   - **Export:** HTML/Markdown report, diagnosis/graph JSON, findings CSV, graph HTML.
+
+The graph view loads vis-network 9.1.9 from unpkg, so it needs internet access. The flow is checked
+headlessly by `tests/integration/test_ui_smoke.py`.
+
 ## Usage
 
 ```bash
@@ -64,7 +107,7 @@ scaletrace diagnose examples/shop_app --run --allow-execute --model gnn.pt    # 
 scaletrace evaluate examples/orders_app_defective examples/orders_app_fixed examples/shop_app --csv metrics.csv
 
 # 6. UI
-streamlit run scaletrace/app/streamlit_app.py
+streamlit run scaletrace/app/streamlit_app.py      # local only (see .streamlit/config.toml)
 ```
 
 Other commands: `scaletrace rules` (rule status), `scaletrace schema` (report JSON Schema).
@@ -72,6 +115,8 @@ Other commands: `scaletrace rules` (rule status), `scaletrace schema` (report JS
 ## Benchmark (team's 25 good + 25 bad apps)
 
 See [docs/benchmark.md](docs/benchmark.md). Static only; benchmark apps are never trained on.
+**Results of the final run (2026-10-29):** [docs/benchmark_results.md](docs/benchmark_results.md). Labels are AI-assisted
+and not yet independently verified; the test set is locked; sign-offs are logged ([docs/labelling_plan.md](docs/labelling_plan.md)).
 
 ```bash
 scaletrace benchmark init benchmark/bad-07 --kind bad --source team
@@ -84,7 +129,9 @@ scaletrace evaluate --manifest benchmark/bad-07 ...          # dev apps; test ap
 ## Deep learning
 
 See [docs/ml.md](docs/ml.md) for the design, the validation gate and the results.
-**Current status:** on synthetic held-out data (v5) the pre-declared gate passes, but a simple one-hop MLP ties the GNN, and the real benchmark is not labelled yet. See docs/ml.md.
+**Current status:** on synthetic held-out data (v5) the pre-declared gate passes, but a simple one-hop MLP ties the GNN.
+On the real static-only benchmark (recorded labels) **no learned model beats the rules-only baseline** (MRR 0.73 for
+`gnn_static` vs 0.77 for rules_only; no confidence intervals were computed, n = 47 symptoms). See docs/ml.md and docs/benchmark_results.md.
 
 ```bash
 scaletrace ml generate data/train --n 100 --style A                     # synthetic labelled apps (v4)

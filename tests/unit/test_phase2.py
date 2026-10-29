@@ -339,3 +339,18 @@ def test_final_evaluation_reports_controlled_copies_separately(tmp_path):
         assert "orders_app_defective" in results["detection_controlled"][tier]["per_app"]
         assert "orders_app_defective" not in results["detection"][tier]["per_app"]
     assert "CONTROLLED COPIES ONLY" in (tmp_path / "out" / "final_report.md").read_text()
+
+
+def test_hits_on_unverified_defects_are_pending_not_false_positives(tmp_path):
+    from scaletrace.benchmark.final import split_pending
+    from scaletrace.pipeline import run_static_analysis
+
+    root = _mock_benchmark(tmp_path / "bench")
+    manifest = load_manifest(root / "orders_app_defective")
+    findings = run_static_analysis(root / "orders_app_defective").report.findings
+    scored, held = split_pending(findings, manifest, "source")
+    assert held == [] and scored == findings  # all its defects are verified: nothing is held out
+    for defect in manifest.defects:
+        defect.verification.static = "unverified"
+    scored, held = split_pending(findings, manifest, "source")
+    assert held and len(scored) + len(held) == len(findings)

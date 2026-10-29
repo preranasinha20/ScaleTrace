@@ -7,6 +7,7 @@ stable ``code`` so tests and reports can refer to it.
 from __future__ import annotations
 
 import ast
+import json
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -15,13 +16,15 @@ from scaletrace.benchmark.loader import (
     ManifestError,
     file_sha256,
     find_manifest_dirs,
+    labels_sha256,
     load_index,
     load_manifest,
     positive_defects,
     source_sha256,
     unverified_defects,
+    verification_state,
 )
-from scaletrace.benchmark.schema import MANIFEST_FILE, AppManifest
+from scaletrace.benchmark.schema import MANIFEST_FILE, SIGNOFF_LOG, AppManifest
 from scaletrace.benchmark.split import compute_groups
 from scaletrace.graph.knowledge_graph import CONTROL_EDGES, build_knowledge_graph
 from scaletrace.pipeline import run_static_analysis
@@ -92,7 +95,7 @@ def _validate_app(app_dir: Path, manifest: AppManifest, rulebook: Rulebook, repo
     def issue(level: str, code: str, message: str) -> None:
         report.issues.append(Issue(level, manifest.app_id, code, message))
 
-    if manifest.kind == "bad" and not manifest.defects:
+    if manifest.kind == "bad" and not manifest.defects and manifest.split != "excluded":
         issue("error", "bad_without_defects", "kind 'bad' but no defects are listed")
     if manifest.kind == "good":
         for defect in manifest.defects:
@@ -244,6 +247,7 @@ def _validate_index(root: Path, index, loaded: dict, report: ValidationReport) -
     _check_group_splits(groups, {e.app_id: e.split for e in index.apps}, report)
 
     if index.lock is not None:
+        signoffs = _read_signoffs(root / SIGNOFF_LOG, index.lock.locked_at)
         tests = {e.app_id for e in index.apps if e.split == "test"}
         if tests != set(index.lock.apps):
             report.issues.append(Issue("error", "-", "lock_violation", f"test apps changed since lock: added {sorted(tests - set(index.lock.apps))}, removed {sorted(set(index.lock.apps) - tests)}"))
@@ -252,6 +256,31 @@ def _validate_index(root: Path, index, loaded: dict, report: ValidationReport) -
                 continue
             app_dir = loaded[app_id][0]
             if file_sha256(app_dir / MANIFEST_FILE) != locked.manifest_sha256:
-                report.issues.append(Issue("error", app_id, "lock_violation", "manifest changed since the test set was locked"))
+                _check_signoffs(app_id, loaded[app_id][1], locked, signoffs, report)
             if source_sha256(app_dir) != locked.source_sha256:
                 report.issues.append(Issue("error", app_id, "lock_violation", "source files changed since the test set was locked"))
+
+
+def _read_signoffs(path: Path, locked_at: str) -> dict[tuple[str, str], dict]:
+    """(app_id, defect_id) -> latest sign-off logged after the lock."""
+    latest: dict[tuple[str, str], dict] = {}
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                entry = json.loads(line)
+                if entry["logged_at"] >= locked_at:
+                    latest[(entry["app_id"], entry["defect_id"])] = entry
+    return latest
+
+
+def _check_signoffs(app_id: str, manifest: AppManifest, locked, signoffs: dict, report: ValidationReport) -> None:
+    """A locked manifest may differ only in verification states, and each change must be in the sign-off log."""
+    if locked.labels_sha256 is None or labels_sha256(manifest) != locked.labels_sha256:
+        report.issues.append(Issue("error", app_id, "lock_violation", "labels changed since the test set was locked"))
+        return
+    changed = [d for d, state in verification_state(manifest).items() if state != locked.verification_at_lock.get(d)]
+    unlogged = [d for d in changed if (signoffs.get((app_id, d)) or {}).get("after") != verification_state(manifest)[d]]
+    if unlogged:
+        report.issues.append(Issue("error", app_id, "lock_violation", f"verification changed without a sign-off log entry: {unlogged}"))
+    elif changed:
+        report.issues.append(Issue("warning", app_id, "verification_signed_off", f"{len(changed)} verification sign-off(s) after the lock, all logged"))

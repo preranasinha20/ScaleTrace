@@ -309,3 +309,10 @@ def test_controlled_copy_needs_base_and_follows_its_exclusion(tmp_path):
     manifest["origin"]["derived_from"] = "base"
     (app / MANIFEST_FILE).write_text(json.dumps(manifest))
     assert "controlled_base_excluded" in codes(tmp_path) and "controlled_without_base" not in codes(tmp_path)
+
+
+def test_excluded_bad_app_needs_no_defects(tmp_path):
+    make_app(tmp_path, "b1", defects=[])
+    assert "bad_without_defects" in codes(tmp_path)
+    make_app(tmp_path, "b1", defects=[], split="excluded", exclusion_reason="not a FastAPI application")
+    assert "bad_without_defects" not in codes(tmp_path)

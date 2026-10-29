@@ -96,3 +96,16 @@ def test_expected_rank_handles_ties():
     assert expected_rank([0.9, 0.1, 0.5], [True, False, False]) == 1
     assert expected_rank([0.5, 0.5, 0.1], [True, False, False]) == 1.5
     assert expected_rank([0.1, 0.9], [True, False]) == 2
+
+
+class _NotAWeight:
+    pass
+
+
+def test_load_checkpoint_refuses_arbitrary_pickled_objects(tmp_path):
+    import torch
+
+    path = tmp_path / "evil.pt"
+    torch.save({"version": 1, "payload": _NotAWeight()}, path)
+    with pytest.raises(Exception):
+        load_checkpoint(path)

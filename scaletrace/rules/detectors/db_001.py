@@ -13,6 +13,7 @@ queries in the loop *iterable* (``for u in db.query(User)``), which run once.
 
 from __future__ import annotations
 
+import ast
 from collections.abc import Iterator
 
 from scaletrace.analyzer.project import ProjectIndex, unbounded
@@ -21,6 +22,24 @@ from scaletrace.schemas import StaticEvidence
 
 PATTERN_DIRECT = "database call nested inside for or while loop"
 PATTERN_INDIRECT = "database dependency reachable from loop body"
+
+
+def discarded_coroutine(project: ProjectIndex, info, call) -> bool:
+    """True when the call creates a coroutine that is thrown away, so the helper's body never runs.
+
+    Python semantics: calling an ``async def`` function only creates a coroutine object; its body runs when the
+    coroutine is awaited or scheduled. A call whose result is discarded (the call *is* the whole expression
+    statement) is therefore never executed. Everything else is kept: ``await helper()``, ``create_task(helper())``,
+    ``tasks.append(helper())``, ``x = helper()`` and comprehensions passed to ``gather`` may all run the helper.
+    Decorated helpers are kept too, because a decorator can change what calling them does.
+    (Added post-hoc, from a locked-test-split review note; see docs/error_analysis.md section 8.)
+    """
+    target = project.functions.get(call.callee)
+    node = getattr(getattr(target, "scope", None), "node", None)
+    if not isinstance(node, ast.AsyncFunctionDef) or node.decorator_list:
+        return False
+    parent = info.ctx.parent(call.node)
+    return isinstance(parent, ast.Expr) and parent.value is call.node
 
 
 class DbQueryInLoopDetector(Detector):
@@ -67,6 +86,8 @@ class DbQueryInLoopDetector(Detector):
 
             for call in info.facts.calls:
                 if call.kind != "call" or call.callee is None or not unbounded(call.loops):
+                    continue
+                if discarded_coroutine(project, info, call):
                     continue
                 path = project.resource_path(call.callee, "database")
                 if path is None:

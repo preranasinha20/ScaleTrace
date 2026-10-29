@@ -36,8 +36,13 @@ ml = [
 ml-pretrained = [
     "transformers>=4.40",
 ]
+# Web API used by the TypeScript frontend (frontend/). Same pipeline as the Streamlit UI.
+api = [
+    "fastapi>=0.110",
+    "uvicorn>=0.30",
+]
 ui = [
-    "streamlit>=1.35",
+    "streamlit>=1.35,<1.67",  # the graph view uses components.v1.html, deprecated and due for removal
 ]
 dev = [
     "pytest>=8",

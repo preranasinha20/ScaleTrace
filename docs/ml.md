@@ -265,3 +265,14 @@ MRR on the held-out style B (40 apps, 127 symptoms), overall and on the graph-re
 4. *Runtime still essential:* the static-only GNN reaches 0.815 (0.780 on graph-required).
 5. *The real test* is the locked team benchmark, run once with frozen checkpoints. It is static-only
    until the sandbox exists, so the runtime-dependent models cannot yet be evaluated on real code.
+
+## Real-benchmark result (final run, 2026-10-29)
+
+The locked test split was evaluated once, static-only, against the frozen labels as recorded (AI-assisted,
+not yet independently verified). See [benchmark_results.md](benchmark_results.md).
+
+- MRR: rules_only 0.77, gnn_combined_no_code 0.75, heuristic_static 0.74, gnn_static 0.73, mlp_hop 0.64,
+  mlp_node_only 0.59, random 0.38 (n = 47 symptoms; models over 3 seeds).
+- **The GNN does not beat the rules-only baseline on real code.** The synthetic v5 gate result does not
+  transfer, so the GNN is not validated on real applications. GNN variants still rank above the node-only MLP.
+- No confidence intervals were computed; differences among the top methods are within the noise of n = 47.

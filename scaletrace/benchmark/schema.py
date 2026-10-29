@@ -19,6 +19,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 MANIFEST_FILE = "scaletrace_benchmark.json"
 INDEX_FILE = "benchmark_index.json"
 FINAL_RUNS_LOG = "final_runs.log"
+SIGNOFF_LOG = "verification_log.jsonl"  # verification sign-offs made after the test set was locked
+REVIEW_COPY = "scaletrace_review.json"  # copy of the applied review, stored next to the manifest
 SCHEMA_VERSION = "1.0"
 
 VerificationState = Literal["unverified", "verified", "rejected"]
@@ -28,6 +30,10 @@ SymptomKind = Literal["query_growth", "latency_growth", "memory_growth"]
 # Two tiers, always reported separately: "source" = confirmed in the code by a person;
 # "runtime" = additionally confirmed at runtime (or the rule has no runtime metric).
 VERIFICATION_LEVELS = ("source", "runtime")
+# "recorded": every recorded, non-rejected defect, i.e. the frozen labels as drafted, whether or not a second person
+# has confirmed them yet. Reported separately and always named as such; never presented as verified.
+RECORDED_LEVEL = "recorded"
+SCORING_LEVELS = (RECORDED_LEVEL,) + VERIFICATION_LEVELS
 
 
 class Verification(BaseModel):
@@ -57,7 +63,9 @@ class Verification(BaseModel):
             return self.source_confirmed
         if level == "runtime":
             return self.fully_verified
-        raise ValueError(f"unknown verification level {level!r}; use one of {VERIFICATION_LEVELS}")
+        if level == RECORDED_LEVEL:
+            return not self.rejected
+        raise ValueError(f"unknown verification level {level!r}; use one of {SCORING_LEVELS}")
 
     @property
     def rejected(self) -> bool:
@@ -171,6 +179,14 @@ class LockedApp(BaseModel):
 
     manifest_sha256: str
     source_sha256: str
+    labels_sha256: str | None = Field(
+        default=None,
+        description="Hash of the labels only (manifest without verification states and free-text notes). When set, "
+                    "verification sign-offs may change after the lock if each is recorded in the sign-off log.",
+    )
+    verification_at_lock: dict[str, dict] = Field(
+        default_factory=dict, description="defect_id -> {static, runtime, verified_by} when the lock was taken."
+    )
 
 
 class Lock(BaseModel):

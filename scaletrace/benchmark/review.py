@@ -20,6 +20,7 @@ review wrote and leaves everything else in the manifest untouched.
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
@@ -27,14 +28,13 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from scaletrace.benchmark.fetch import DRAFT_MARKER
-from scaletrace.benchmark.loader import ManifestError, load_manifest
+from scaletrace.benchmark.loader import ManifestError, labels_sha256, load_index, load_manifest, verification_state
 from scaletrace.benchmark.register import Candidate
-from scaletrace.benchmark.schema import MANIFEST_FILE, Defect, KnownNonDefect, Verification
+from scaletrace.benchmark.schema import MANIFEST_FILE, REVIEW_COPY, SIGNOFF_LOG, Defect, KnownNonDefect, Verification
 from scaletrace.diagnosis.correlate import RULE_METRICS
 from scaletrace.pipeline import run_static_analysis
 from scaletrace.rules.rulebook import Rulebook
 
-REVIEW_COPY = "scaletrace_review.json"
 REVIEW_REASON_PREFIX = "[review] "
 EXCERPT_CONTEXT = 4
 
@@ -72,6 +72,7 @@ class ReviewItem(BaseModel):
     symptom_kind: Literal["", "query_growth", "latency_growth", "memory_growth"] = ""
     root_cause_function: str = Field(default="", description="module:qualname where the fix belongs.")
     static_verified_by: str = ""
+    static_rejected_by: str = Field(default="", description="A second person who checked the code and disagrees: static 'rejected'.")
     runtime: Literal["unverified", "not_applicable"] = "unverified"
     runtime_note: str = ""
 
@@ -230,6 +231,7 @@ def apply_review(review_path: str | Path, apps_dir: Path, rulebook: Rulebook) ->
     except ManifestError as exc:
         raise ReviewError(str(exc)) from exc
     problems: list[str] = []
+    before = verification_state(manifest)
     a = review.app
     if a.decision == "exclude" and not a.exclusion_reason.strip():
         problems.append("app.decision is 'exclude' but exclusion_reason is empty")
@@ -263,6 +265,15 @@ def apply_review(review_path: str | Path, apps_dir: Path, rulebook: Rulebook) ->
         if not item.function:
             problems.append(f"{tag}: a defect must be inside a function; correct file/line_start/line_end first")
             continue
+        verified_by, rejected_by = item.static_verified_by.strip(), item.static_rejected_by.strip()
+        if verified_by and rejected_by:
+            problems.append(f"{tag}: set static_verified_by or static_rejected_by, not both")
+            continue
+        reviewer = review.reviewer.strip().split(" (")[0].casefold()
+        signer = (verified_by or rejected_by).casefold()
+        if signer and signer in {reviewer, "claude"}:  # the AI drafting reviews is never a verifier
+            problems.append(f"{tag}: static_verified_by/static_rejected_by must be a second person, not the reviewer ({review.reviewer!r})")
+            continue
         defects.append(Defect(
             defect_id=f"{review.app_id}-{item.item_id}", rule_id=item.rule_id, category=rulebook.get(item.rule_id).category,
             file=item.file, function=item.function, line_start=item.line_start, line_end=item.line_end,
@@ -270,9 +281,9 @@ def apply_review(review_path: str | Path, apps_dir: Path, rulebook: Rulebook) ->
             root_cause_functions=[item.root_cause_function] if item.root_cause_function else [],
             description=item.reason.strip(),
             verification=Verification(
-                static="verified" if item.static_verified_by.strip() else "unverified",
+                static="verified" if verified_by else ("rejected" if rejected_by else "unverified"),
                 runtime=item.runtime,
-                verified_by=item.static_verified_by.strip() or None,
+                verified_by=verified_by or rejected_by or None,
                 date=review.review_date or None,
                 notes=item.runtime_note.strip() or ("Runtime not verified: public code is not executed without a sandbox."
                                                      if item.runtime == "unverified" else ""),
@@ -281,8 +292,9 @@ def apply_review(review_path: str | Path, apps_dir: Path, rulebook: Rulebook) ->
     if problems:
         raise ReviewError("review not applied:\n  " + "\n  ".join(problems))
 
-    prefix = f"{review.app_id}-r"
-    manifest.defects = [d for d in manifest.defects if not d.defect_id.startswith(prefix)] + defects
+    # Defects written by an earlier apply-review (worksheet items rNN, reviewer-added items xNN) are replaced.
+    from_review = re.compile(rf"^{re.escape(review.app_id)}-[rx]\d+$")
+    manifest.defects = [d for d in manifest.defects if not from_review.match(d.defect_id)] + defects
     manifest.known_non_defects = [k for k in manifest.known_non_defects if not k.reason.startswith(REVIEW_REASON_PREFIX)] + known
     if a.decision == "exclude":
         manifest.split, manifest.exclusion_reason = "excluded", a.exclusion_reason.strip()
@@ -294,8 +306,14 @@ def apply_review(review_path: str | Path, apps_dir: Path, rulebook: Rulebook) ->
     description = manifest.description.split(" Reviewed by ")[0].replace(DRAFT_MARKER, "Draft written by ScaleTrace")
     manifest.description = f"{description} {reviewed}"
     if a.notes.strip():
-        manifest.run.notes = (manifest.run.notes + " " if manifest.run.notes else "") + f"Reviewer: {a.notes.strip()}"
+        earlier = re.split(r"(?:^| )Reviewer: ", manifest.run.notes)[0].rstrip()  # re-applying replaces, never appends
+        manifest.run.notes = (earlier + " " if earlier else "") + f"Reviewer: {a.notes.strip()}"
+    signoffs = _check_lock(apps_dir, review, manifest, before)
     (app_dir / MANIFEST_FILE).write_text(manifest.model_dump_json(indent=2) + "\n", encoding="utf-8")
+    if signoffs:
+        with (apps_dir / SIGNOFF_LOG).open("a", encoding="utf-8") as log:
+            for entry in signoffs:
+                log.write(json.dumps(entry, sort_keys=True) + "\n")
     (app_dir / REVIEW_COPY).write_text(review.model_dump_json(indent=2) + "\n", encoding="utf-8")
     return {
         "app_id": review.app_id,
@@ -305,4 +323,21 @@ def apply_review(review_path: str | Path, apps_dir: Path, rulebook: Rulebook) ->
         "open_items": open_items,
         "excluded": a.decision == "exclude",
         "licence": manifest.origin.license or "unknown",
+        "signoffs_logged": len(signoffs),
     }
+
+
+def _check_lock(apps_dir: Path, review: ReviewFile, manifest, before: dict[str, dict]) -> list[dict]:
+    """On a locked test app, refuse label changes and return the sign-off log entries for verification changes."""
+    index = load_index(apps_dir)
+    locked = index.lock.apps.get(review.app_id) if index is not None and index.lock is not None else None
+    if locked is None:
+        return []
+    if locked.labels_sha256 is None or labels_sha256(manifest) != locked.labels_sha256:
+        raise ReviewError(f"{review.app_id} is in the locked test set: its labels are frozen (rule, location, endpoint, "
+                          "decisions, exclusions). Only verification sign-offs may change after the lock.")
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    after = verification_state(manifest)
+    return [{"logged_at": now, "app_id": review.app_id, "defect_id": defect_id, "before": before.get(defect_id),
+             "after": state, "review_file": f"review_{review.app_id}.json", "review_date": review.review_date or None}
+            for defect_id, state in after.items() if before.get(defect_id) != state]

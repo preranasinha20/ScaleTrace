@@ -4,8 +4,47 @@
     {
       "name": "scaletrace-ui",
       "runtimeExecutable": ".venv/Scripts/python.exe",
-      "runtimeArgs": ["-m", "streamlit", "run", "scaletrace/app/streamlit_app.py", "--server.headless", "true", "--server.port", "8501", "--browser.gatherUsageStats", "false"],
+      "runtimeArgs": [
+        "-m",
+        "streamlit",
+        "run",
+        "scaletrace/app/streamlit_app.py",
+        "--server.headless",
+        "true",
+        "--server.address",
+        "127.0.0.1",
+        "--server.port",
+        "8501",
+        "--browser.gatherUsageStats",
+        "false",
+        "--client.toolbarMode",
+        "minimal"
+      ],
       "port": 8501
+    },
+    {
+      "name": "scaletrace-api",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": [
+        "-m",
+        "scaletrace.api",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8000"
+      ],
+      "port": 8000
+    },
+    {
+      "name": "scaletrace-web-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "frontend",
+        "run",
+        "dev"
+      ],
+      "port": 5173
     }
   ]
 }

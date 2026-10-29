@@ -14,9 +14,13 @@
 * **Database handles are inferred**, strongest first: annotation, `Depends(get_db)`, factory call, name.
   Name-only inference can cause false positives/negatives. A handle passed under an unusual,
   un-annotated name (e.g. `store`) is missed -- the synthetic "db_hidden" defect tests exactly this.
-* **Loop cardinality is not inferred**, except loops over small literals / constant `range()`. A loop
-  over a module-level constant tuple (`for s in STATUSES`) *is* reported; runtime evidence is what
-  shows it does not grow (`not_confirmed`).
+* **Loop cardinality is not inferred**, except loops over small literals / constant `range()` and, since
+  2026-10-29, over a module-level name bound once to a small literal list/tuple/set that the module never
+  changes (`for s in STATUSES`). Mutation from *another* module through an import is not tracked. A function-local name bound once to such a literal, and only read in non-mutating ways, counts too (post-hoc, 29 October); mutation through an alias that escapes the checks is not tracked. Bounds
+  from configuration (`CART_MAX_LINES`), slicing (`ids[:limit]`) or business rules are not inferred.
+* **MEM-001 bounds** are syntactic: a `.limit()`-style call in the chain, in a statement variable the call
+  receives, LIMIT in SQL text, or INSERT ... RETURNING. Reads bounded by their input (`where(id.in_(ids))`)
+  or by a fixed enum are still reported.
 * **Rule-specific**: MEM-001 reports every unbounded read (including tables small in practice).
   MEM-002 only considers module/class-level collections (decision D4). DB-003 matches relationship
   attributes by name. CMP-001 uses a configurable vocabulary of "expensive" calls. DB-002 and CMP-002
@@ -87,3 +91,17 @@
 
 * In the sandbox used during development, pytest could not write to the system temp folder, so tests
   ran with `--basetemp` elsewhere. Plain `pytest` works in a normal shell.
+
+## Real-benchmark evaluation (2026-10-29)
+
+- Labels are an AI-assisted draft frozen as ground truth; no second-person sign-off existed at the final run.
+  Results are reported as the RECORDED tier and must be described as such.
+- The real bad set is tiny (2 apps, MEM-001 only); DB-001/DB-003/CMP-001 positives come from 3 controlled copies.
+- good-c014 and good-c030 are partially labelled (hits unclassified).
+- At the final run, MEM-001 missed the two-step style (`result = await db.execute(...)`, then
+  `result.scalars().all()`) and returned `Query` objects; CMP-001 missed passlib hashing. Rules were frozen
+  during labelling. The two-step miss was fixed AFTER the final run (docs/rule_changes.md); the final-run
+  numbers do not include that fix, and any re-run on the same test split would be post-hoc.
+- On real code the GNN does not beat the rules-only ranking (static-only, no CIs, n = 47 symptoms).
+- The UI's graph view needs internet access (vis-network from unpkg) and uses Streamlit's deprecated
+  `components.v1.html` (Streamlit pinned < 1.67).

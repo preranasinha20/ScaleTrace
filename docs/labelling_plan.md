@@ -129,6 +129,103 @@ Apps not reviewed by the freeze: set `app.decision: exclude`, `exclusion_reason:
 - Route fix 2: a parent router's own `APIRouter(prefix=)` now applies to routers included into it
   (good-c038 endpoints now carry `/api`). 30 untouched worksheets regenerated; reviewed ones untouched.
 
+- **Labelling policy (decided by the user, 2026-10-26):**
+  1. An endpoint that returns every row of a growing table (or a whole child collection) with no limit is a
+     MEM-001 defect in good and bad apps alike (consistent with bad-cand-013). Good apps keep `kind: good`
+     but carry these positives; ScaleTrace misses (e.g. a returned unmaterialised `Query`) count as false negatives.
+  2. Pagination with a client-chosen limit and no maximum (e.g. `?limit=` default 10) is **not** a defect;
+     the missing maximum is noted.
+  3. *(Decided by the user, 2026-10-29, question Q1.)* N+1 queries (DB-001) and unbounded reads (MEM-001) in
+     **background jobs** (Celery tasks, cron sweeps) count as defects, as on a request path, **when the
+     scalability risk is supported by evidence**. How the evidence was read in the 2026-10-29 suggestions
+     (an AI-assisted interpretation, open to the reviewer):
+     - *Supported:* the loop or read covers a set that grows with accumulated data (all customers, all
+       groups, every event that mentions a user), and no limit, batching or cap is visible in the code.
+     - *Not supported:* the set is capped by a constant, batch size or configuration, or it is set by
+       something that does not accumulate (the admins of one realm, a fixed enum).
+     - *Open, question Q3:* work-queue sweeps that drain their own backlog each run (expired jobs, unpaid
+       orders past a cutoff). Their size follows throughput per interval, not accumulated data, so the code
+       alone does not settle it.
+     This applies to labels only after review and sign-off. Frozen labels on locked test apps are unchanged.
+  4. *(Decided by the user, 2026-10-29, question Q3; this settles the "Open, question Q3" point under
+     policy 3.)* Background sweeps that **drain their own backlog** are **not automatically defects**. They count
+     as defects only when the source code provides evidence of a scalability risk:
+     - *Defect:* the code supports a concrete scalability risk, such as a backlog that can accumulate faster
+       than it is processed, unbounded materialisation of growing data, repeated unnecessary work, or
+       per-record queries over a growing set.
+     - *Not a defect:* the code shows that work and resource use are adequately bounded for the pattern
+       assessed, with no other supported scalability risk.
+     - *Unsure:* the code alone cannot establish whether the workload is manageable, whether the backlog
+       grows, or whether the risk is material. Production arrival rates and workloads are not assumed.
+     This also applies to labels only after review and sign-off. Frozen labels on locked test apps are unchanged.
+  5. *(Decided by the user, 2026-10-29, question Q2.)* Loading rows **only to compute totals** (rows not returned
+     or used otherwise) is **not automatically a defect**. It counts as a MEM-001 defect when the code
+     unnecessarily materialises a potentially growing, unbounded result set in application memory:
+     - *Defect:* the rows are loaded solely to calculate a count, sum or similar aggregate, and the loaded set
+       can grow without an established bound. The unnecessary materialisation and the supported risk are explained.
+     - *Not a defect:* the input is demonstrably bounded, or the rows are needed for other legitimate
+       processing, not only for totals.
+     - *Unsure:* the code does not establish whether the set is bounded or whether the rows serve other
+       necessary work. Production data sizes and workloads are not assumed.
+     A database-side aggregate (COUNT, SUM) is a possible alternative, not an automatic guarantee of better
+     performance; the actual code and context are assessed. This also applies to labels only after review and
+     sign-off. Frozen labels on locked test apps are unchanged.
+- Base apps reviewed (2026-10-26, AI draft): good-c032 keep (0 defects), good-c002 keep (4 MEM-001 list-all
+  defects, 1 unreachable helper), good-c038 keep (2 MEM-001 list-all defects ScaleTrace misses). The copy
+  script now inherits these decisions onto the copies' identical code.
+- Fix 3: route handlers that reuse a function name in one file were merged into one (good-c002 showed 3 of 8
+  endpoints). Earlier decorated duplicates are now kept as `name@L<line>`. Fix 4: re-running `apply-review`
+  no longer duplicates reviewer-added items (`xNN`).
+
+- MIT good apps reviewed (2026-10-26, AI draft): c001, c007, c011, c032 (0 defects); c003 (4 MEM-001, all missed by
+  ScaleTrace: async `select` + `scalars().all()`); c008 (1 borderline MEM-001: deck detail returns all cards); c039
+  (1 MEM-001: whole JSON upload read). Still open among MIT apps: **good-c034** (14 hits).
+- Fix 5: `include_router` prefixes built from constants / f-strings (good-c003: 19 -> 27 endpoints).
+- Totals: 27 defects recorded in non-excluded apps, **0 source-confirmed**. Validation: the 5 P2 errors remain.
+- Demo (2026-10-26): Streamlit flow verified headlessly (tests/integration/test_ui_smoke.py). Safety fixes: checkpoints
+  load with `weights_only=True`; the UI lists only v5 checkpoints and never offers `benchmark_data` repos; the server
+  binds to 127.0.0.1; Streamlit pinned `<1.67`.
+
+- 2026-10-26 (later), AI-draft reviews:
+  - good-c034 keep: 2 MEM-001 (GET /admin/users; GET /auth/sessions, where refresh tokens are never pruned); 9 hits are
+    in a migration or the repo's benchmark harness.
+  - P2 bad apps all **excluded**: bad-cand-002 (fixed 1,000-row CSV, no target defect); 003/004/017 (Flask) and 024
+    (Streamlit): not FastAPI. The validator no longer requires defects in an excluded bad app.
+  - Unknown-licence good apps: LICENSE files found and recorded for c009, c010, c012, c028, c035 (MIT) and c030
+    (Apache-2.0); c014 (MIT) still to review. Reviewed: c005 (4), c009 (0), c010 (3), c012 (0), c016 (2), c021 (9, 5
+    unsure), c023 (0), c025 (7; `cancel_sales_order` never awaits `release_reservation`, a functional bug), c027 (0),
+    c028 (0), c035 (0), c036 (1), c041 (1).
+  - Fix 6: `include_router(router=..., prefix=...)` keyword form (good-c016 routes got their `/api/...` prefixes).
+  - State: 30 apps kept (25 good, 5 bad: 013, 020 and 3 controlled copies), 56 defects recorded (MEM-001 45, DB-001 8,
+    DB-003 2, CMP-001 1), **0 source-confirmed**. `benchmark validate`: **VALID** (0 errors).
+  - good-c014 (MIT) and good-c030 (Apache-2.0): **kept as good with a PARTIAL review** (user decision 2026-10-26).
+    Their 33 hits each are unclassified and real defects there are not recorded, so report detection on them with
+    that caveat (their hits count as unconfirmed; recall on them is undercounted).
+  - **Split created (not locked)**, seed 0, dev 0.2, grouped by template_family/derived_from/author:
+    dev = bad-ctrl-c032-db001, good-c001, c009, c014, c023, c032; test = 24 apps (bad-cand-013, bad-cand-020,
+    bad-ctrl-c002-db003, bad-ctrl-c038-cmp001 + 20 good); 7 excluded. Copies share a split with their base.
+- **Test set LOCKED 2026-10-26T08:25:14Z** (user decision: lock before the defects are source-confirmed).
+  Labels and sources of the 24 test apps are frozen. Only verification sign-offs may change, and each is logged.
+
+### How to sign off a defect after the lock (second person only)
+
+1. Read the defect in `benchmark_data/review/review_<app>.md` and in the code (for controlled copies also
+   `benchmark_data/controlled/<app>.patch`).
+2. In `review_<app>.json`, set that item's `static_verified_by` to your name (not the reviewer's), and `review_date`.
+   Change nothing else: any label change is refused on a locked app.
+3. Run `scaletrace benchmark apply-review benchmark_data/review/review_<app>.json --apps-dir benchmark_data/apps`.
+   It records the sign-off in `benchmark_data/apps/verification_log.jsonl`.
+4. Run `scaletrace benchmark validate benchmark_data/apps`: logged sign-offs show as `verification_signed_off` warnings.
+   An unlogged or label change is a `lock_violation` error.
+
+To reject a defect instead, the second person sets `static_rejected_by` to their name (not `static_verified_by`).
+The defect becomes `static: rejected`, is no longer a positive, and the rejection is logged like a sign-off.
+- Effect of the list-all policy: only 10 of the 25 kept good apps have no defect; ScaleTrace misses many list-all
+  cases (async `select` + `scalars().all()`, two-step `query.all()`, returning a `Query`).
+
+- 2026-10-29: labels frozen as ground truth (user decision). Final run done on the locked test split (RECORDED tier);
+  results in `docs/benchmark_results.md`. No sign-offs had been logged at the time of the run.
+
 **Blockers**
 - A second person must confirm each recorded defect in the code (fill `static_verified_by`, re-run
   `apply-review`). Until then the real benchmark has **0 positives** at both tiers.

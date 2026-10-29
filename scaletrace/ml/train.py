@@ -202,7 +202,8 @@ def save_checkpoint(path: str | Path, result: TrainResult, meta: dict) -> Path:
 
 
 def load_checkpoint(path: str | Path) -> tuple[torch.nn.Module, dict]:
-    checkpoint = torch.load(path, map_location="cpu", weights_only=False)
+    # weights_only: never unpickle arbitrary objects (a .pt file from elsewhere could run code on load).
+    checkpoint = torch.load(path, map_location="cpu", weights_only=True)
     if checkpoint.get("version") != CHECKPOINT_VERSION:
         raise ValueError(f"unsupported checkpoint version in {path}")
     config = checkpoint["model_config"]

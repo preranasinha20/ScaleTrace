@@ -15,7 +15,9 @@ import random
 from datetime import datetime, timezone
 from pathlib import Path
 
-from scaletrace.benchmark.loader import ManifestError, file_sha256, load_index, save_index, source_sha256
+from scaletrace.benchmark.loader import (
+    ManifestError, file_sha256, labels_sha256, load_index, load_manifest, save_index, source_sha256, verification_state,
+)
 from scaletrace.benchmark.schema import MANIFEST_FILE, AppManifest, BenchmarkIndex, IndexEntry, Lock, LockedApp
 
 DEFAULT_GROUP_BY = ["template_family", "derived_from"]
@@ -116,7 +118,9 @@ def lock_index(root: Path, index: BenchmarkIndex) -> BenchmarkIndex:
         app_dir = root / entry.path
         if not (app_dir / MANIFEST_FILE).exists():
             raise ManifestError(f"{entry.app_id}: manifest missing at {app_dir}")
-        locked[entry.app_id] = LockedApp(manifest_sha256=file_sha256(app_dir / MANIFEST_FILE), source_sha256=source_sha256(app_dir))
+        manifest = load_manifest(app_dir)
+        locked[entry.app_id] = LockedApp(manifest_sha256=file_sha256(app_dir / MANIFEST_FILE), source_sha256=source_sha256(app_dir),
+                                         labels_sha256=labels_sha256(manifest), verification_at_lock=verification_state(manifest))
     index.lock = Lock(locked_at=datetime.now(timezone.utc).isoformat(timespec="seconds"), apps=locked)
     save_index(root, index)
     return index
